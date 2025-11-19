@@ -38,8 +38,17 @@ dependencies:
   firebase_auth: ^6.1.1 
   cloud_firestore: ^6.0.3 
   google_sign_in: ^6.1.1
-  flutter_sms: ^2.3.3 
+  intl_phone_field: ^3.2.0
+  country_picker: ^2.0.20
+  # flutter_sms:
+  #   git:
+  #     url: https://github.com/fluttercommunity/flutter_sms.git
+  #     ref: master
+  
+
+  # flutter_sms_plus: ^1.0.1
   flutter_hooks: ^0.20.3  
+  # sms_advanced: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -57,13 +66,10 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/google_logo.png
+      - assets/company.png
+      - assets/google_logo.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

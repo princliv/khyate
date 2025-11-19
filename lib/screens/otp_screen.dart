@@ -3,7 +3,7 @@ import '../services/auth_service.dart';
 import 'home_screen.dart';
 
 class OTPScreen extends StatefulWidget {
-  const OTPScreen({Key? key}) : super(key: key);
+  const OTPScreen({super.key});
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
@@ -69,21 +69,21 @@ class _OTPScreenState extends State<OTPScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: verifyOTP,
-                child: const Text("Verify OTP"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC5A572),
                   minimumSize: const Size(double.infinity, 48),
                 ),
+                child: const Text("Verify OTP"),
               )
             ],
             if (verificationId == null)
               ElevatedButton(
                 onPressed: sendCode,
-                child: const Text("Send OTP"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC5A572),
                   minimumSize: const Size(double.infinity, 48),
                 ),
+                child: const Text("Send OTP"),
               ),
             const SizedBox(height: 10),
             Text(message),

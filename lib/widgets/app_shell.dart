@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:khyate_b2b/screens/profile_screen.dart';
 
 typedef AppShellPageBuilder = Widget Function(BuildContext context, bool isDarkMode);
 
@@ -91,38 +92,49 @@ class _AppShellState extends State<AppShell> {
             alignment: Alignment.centerLeft,
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: const [
-                FlutterLogo(size: 32),
-                SizedBox(width: 8),
-                Text(
-                  'Company',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              children: [
+                Image.asset('assets/company.png', height: 32, width: 32),
+                const SizedBox(width: 8),
               ],
             ),
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await widget.onLogout();
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              _isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
-              color: Colors.white,
-            ),
-            tooltip: 'Toggle theme',
-            onPressed: _onToggleTheme,
-          ),
-          const SizedBox(width: 8),
-        ],
+  IconButton(
+    icon: const Icon(Icons.person, color: Colors.white),
+    tooltip: 'Profile',
+    onPressed: () {
+      Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => ProfileScreen(isDarkMode: _isDarkMode),
+  ),
+);
+
+
+    },
+  ),
+
+  IconButton(
+    icon: const Icon(Icons.logout, color: Colors.white),
+    tooltip: 'Logout',
+    onPressed: () async {
+      await widget.onLogout();
+    },
+  ),
+
+  IconButton(
+    icon: Icon(
+      _isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+      color: Colors.white,
+    ),
+    tooltip: 'Toggle theme',
+    onPressed: _onToggleTheme,
+  ),
+
+  const SizedBox(width: 8),
+],
+
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
@@ -152,4 +164,3 @@ class _AppShellState extends State<AppShell> {
     );
   }
 }
-
