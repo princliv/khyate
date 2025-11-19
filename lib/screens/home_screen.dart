@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:khyate_b2b/screens/fitness_screen.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/hero_section.dart';
@@ -30,12 +31,7 @@ class HomeScreen extends StatelessWidget {
         AppShellPage(
           label: 'Fitness',
           icon: Icons.fitness_center,
-          builder: (ctx, isDarkMode) => _HomeSection(
-            title: 'Fitness Programs',
-            description:
-                'Discover tailored workouts, progress tracking, and coaching tips to stay active.',
-            isDarkMode: isDarkMode,
-          ),
+          builder: (ctx, isDarkMode) => FitnessScreen(isDarkMode: isDarkMode),
         ),
         AppShellPage(
           label: 'Wellness',
