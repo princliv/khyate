@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:khyate_b2b/screens/admin_dashboard.dart';
 import 'package:khyate_b2b/screens/profile_screen.dart';
+// import 'dashboard_screen.dart'; // ← Create this screen
 
-typedef AppShellPageBuilder = Widget Function(BuildContext context, bool isDarkMode);
+typedef AppShellPageBuilder = Widget Function(
+  BuildContext context,
+  bool isDarkMode,
+);
 
 class AppShellPage {
   const AppShellPage({
@@ -40,11 +47,75 @@ class _AppShellState extends State<AppShell> {
   late bool _hasNavSelection;
   bool _isDarkMode = false;
 
+  // 🔥 Admin flag
+  bool _isAdmin = false;
+
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex.clamp(0, widget.pages.length - 1);
     _hasNavSelection = widget.landingBuilder == null;
+
+    _checkAdmin(); // 🔥 fetch admin status
+  }
+
+  // ⭐ Fetch isAdmin from Firestore
+  Future<void> _checkAdmin() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (doc.exists && doc.data()!['isAdmin'] == true) {
+        setState(() => _isAdmin = true);
+      }
+    }
+  }
+
+  // ⭐ Admin popup dialog
+  void _showAdminOptions() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Select an option"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text("Profile"),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(isDarkMode: _isDarkMode),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.dashboard),
+                title: const Text("Dashboard"),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdminDashboard(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _onToggleTheme() {
@@ -70,6 +141,7 @@ class _AppShellState extends State<AppShell> {
     final Widget displayedPage = showSelection
         ? widget.pages[_selectedIndex].builder(context, _isDarkMode)
         : widget.landingBuilder!(context, _isDarkMode);
+
     final Widget currentPage = KeyedSubtree(
       key: ValueKey(
         '${showSelection ? 'page_$_selectedIndex' : 'landing'}_${_isDarkMode ? 'dark' : 'light'}',
@@ -100,41 +172,44 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
         actions: [
-  IconButton(
-    icon: const Icon(Icons.person, color: Colors.white),
-    tooltip: 'Profile',
-    onPressed: () {
-      Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => ProfileScreen(isDarkMode: _isDarkMode),
-  ),
-);
+          // 🔥 Profile button with admin logic
+          IconButton(
+            icon: const Icon(Icons.person, color: Colors.white),
+            tooltip: 'Profile',
+            onPressed: () {
+              if (_isAdmin) {
+                _showAdminOptions(); // 🔥 admin dialog
+              } else {
+                // Normal user → go directly to profile
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(isDarkMode: _isDarkMode),
+                  ),
+                );
+              }
+            },
+          ),
 
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await widget.onLogout();
+            },
+          ),
 
-    },
-  ),
+          IconButton(
+            icon: Icon(
+              _isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+              color: Colors.white,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: _onToggleTheme,
+          ),
 
-  IconButton(
-    icon: const Icon(Icons.logout, color: Colors.white),
-    tooltip: 'Logout',
-    onPressed: () async {
-      await widget.onLogout();
-    },
-  ),
-
-  IconButton(
-    icon: Icon(
-      _isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
-      color: Colors.white,
-    ),
-    tooltip: 'Toggle theme',
-    onPressed: _onToggleTheme,
-  ),
-
-  const SizedBox(width: 8),
-],
-
+          const SizedBox(width: 8),
+        ],
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),

@@ -1,26 +1,5 @@
 import 'package:flutter/material.dart';
-
-class MembershipCardData {
-  final String imageUrl;
-  final String category;
-  final String price;
-  final String title;
-  final String description;
-  final String time;
-  final String mentor;
-  final String reviews;
-
-  MembershipCardData({
-    required this.imageUrl,
-    required this.category,
-    required this.price,
-    required this.title,
-    required this.description,
-    required this.time,
-    required this.mentor,
-    required this.reviews,
-  });
-}
+import '../models/membership_card_model.dart';   // <-- USE MODEL FROM MODELS FOLDER
 
 class MembershipCard extends StatelessWidget {
   final MembershipCardData data;
