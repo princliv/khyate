@@ -38,6 +38,12 @@ class AppShell extends StatefulWidget {
 
   @override
   State<AppShell> createState() => _AppShellState();
+
+  // Static method to navigate to tab from child widgets
+  static void navigateToTab(BuildContext context, int index) {
+    final state = context.findAncestorStateOfType<_AppShellState>();
+    state?.navigateToTab(index);
+  }
 }
 
 class _AppShellState extends State<AppShell> {
@@ -132,6 +138,10 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void navigateToTab(int index) {
+    _onNavTapped(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color scaffoldBackground =
@@ -157,17 +167,23 @@ class _AppShellState extends State<AppShell> {
       appBar: AppBar(
         backgroundColor: _barColor,
         elevation: 0,
-        leadingWidth: 150,
+        leadingWidth: 200,
         leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/company.png', height: 32, width: 32),
-                const SizedBox(width: 8),
-              ],
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: SizedBox(
+            height: 35,
+            width: 140,
+            child: Image.asset(
+              'assets/company.png',
+              fit: BoxFit.contain,
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                if (wasSynchronouslyLoaded) return child;
+                return frame != null ? child : const SizedBox();
+              },
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('Error loading company.png: $error');
+                return const Icon(Icons.image, color: Colors.white, size: 35);
+              },
             ),
           ),
         ),
