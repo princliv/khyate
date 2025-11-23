@@ -140,8 +140,8 @@ class _SignupScreenState extends State<SignupScreen>
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
+          child: Column(
+            children: [
                       // Logo
                       Image.asset(
                         'assets/loginlogo.png',
@@ -182,7 +182,7 @@ class _SignupScreenState extends State<SignupScreen>
                       children: [
                         // First Name field
                         TextFormField(
-                          controller: firstNameController,
+                controller: firstNameController,
                           textInputAction: TextInputAction.next,
                           style: const TextStyle(
                             fontSize: 16,
@@ -235,7 +235,7 @@ class _SignupScreenState extends State<SignupScreen>
 
                         // Last Name field
                         TextFormField(
-                          controller: lastNameController,
+                controller: lastNameController,
                           textInputAction: TextInputAction.next,
                           style: const TextStyle(
                             fontSize: 16,
@@ -288,7 +288,7 @@ class _SignupScreenState extends State<SignupScreen>
 
                         // Email field
                         TextFormField(
-                          controller: emailController,
+                controller: emailController,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
                           style: const TextStyle(
@@ -345,7 +345,7 @@ class _SignupScreenState extends State<SignupScreen>
 
                         // Password field
                         TextFormField(
-                          controller: passwordController,
+                controller: passwordController,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.next,
                           style: const TextStyle(
@@ -484,12 +484,12 @@ class _SignupScreenState extends State<SignupScreen>
                         const SizedBox(height: 20),
 
                         // Birthday field
-                        GestureDetector(
-                          onTap: () async {
-                            final pickedDate = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime(1990, 1, 1),
-                              firstDate: DateTime(1900),
+              GestureDetector(
+                onTap: () async {
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime(1990, 1, 1),
+                    firstDate: DateTime(1900),
                               lastDate: DateTime.now(),
                               builder: (context, child) {
                                 return Theme(
@@ -508,16 +508,16 @@ class _SignupScreenState extends State<SignupScreen>
                             if (pickedDate != null) {
                               setState(() => birthday = pickedDate);
                             }
-                          },
-                          child: AbsorbPointer(
+                },
+                child: AbsorbPointer(
                             child: TextFormField(
-                              decoration: InputDecoration(
-                                labelText: 'Birthday',
+                    decoration: InputDecoration(
+                      labelText: 'Birthday',
                                 labelStyle: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
-                                hintText: birthday == null
+                      hintText: birthday == null
                                     ? 'Select your birthday'
                                     : DateFormat('MMM dd, yyyy').format(birthday!),
                                 hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -553,15 +553,15 @@ class _SignupScreenState extends State<SignupScreen>
                                     width: 2,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                        ),
+                    ),
+                  ),
+                ),
+              ),
                         const SizedBox(height: 20),
 
                         // Gender field
-                        DropdownButtonFormField<String>(
-                          value: selectedGender,
+              DropdownButtonFormField<String>(
+                value: selectedGender,
                           decoration: InputDecoration(
                             labelText: 'Gender',
                             labelStyle: TextStyle(
@@ -599,7 +599,7 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                           ),
                           items: ['Male', 'Female', 'Others']
-                              .map((gender) => DropdownMenuItem(
+                    .map((gender) => DropdownMenuItem(
                                     value: gender,
                                     child: Text(
                                       gender,
@@ -609,14 +609,14 @@ class _SignupScreenState extends State<SignupScreen>
                                       ),
                                     ),
                                   ))
-                              .toList(),
-                          onChanged: (val) => setState(() => selectedGender = val),
-                        ),
+                    .toList(),
+                onChanged: (val) => setState(() => selectedGender = val),
+              ),
                         const SizedBox(height: 20),
 
                         // Emirates ID field
                         TextFormField(
-                          controller: emiratesIdController,
+                controller: emiratesIdController,
                           textInputAction: TextInputAction.next,
                           style: const TextStyle(
                             fontSize: 16,
@@ -663,7 +663,7 @@ class _SignupScreenState extends State<SignupScreen>
 
                         // Address field
                         TextFormField(
-                          controller: addressController,
+                controller: addressController,
                           textInputAction: TextInputAction.next,
                           style: const TextStyle(
                             fontSize: 16,
@@ -709,27 +709,27 @@ class _SignupScreenState extends State<SignupScreen>
                         const SizedBox(height: 20),
 
                         // Country field
-                        GestureDetector(
-                          onTap: () {
-                            showCountryPicker(
-                              context: context,
-                              showPhoneCode: false,
-                              onSelect: (Country country) {
-                                setState(() => selectedCountry = country);
-                              },
-                            );
-                          },
-                          child: AbsorbPointer(
+              GestureDetector(
+                onTap: () {
+                  showCountryPicker(
+                    context: context,
+                    showPhoneCode: false,
+                    onSelect: (Country country) {
+                      setState(() => selectedCountry = country);
+                    },
+                  );
+                },
+                child: AbsorbPointer(
                             child: TextFormField(
-                              decoration: InputDecoration(
-                                labelText: 'Country',
+                    decoration: InputDecoration(
+                      labelText: 'Country',
                                 labelStyle: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
-                                hintText: selectedCountry == null
-                                    ? 'Select country'
-                                    : '${selectedCountry!.flagEmoji} ${selectedCountry!.name}',
+                      hintText: selectedCountry == null
+                          ? 'Select country'
+                          : '${selectedCountry!.flagEmoji} ${selectedCountry!.name}',
                                 hintStyle: TextStyle(color: Colors.grey.shade400),
                                 prefixIcon: Icon(
                                   Icons.flag_outlined,
@@ -762,14 +762,14 @@ class _SignupScreenState extends State<SignupScreen>
                                     width: 2,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                        ),
+                    ),
+                  ),
+                ),
+              ),
                         const SizedBox(height: 20),
 
                         // Phone field
-                        IntlPhoneField(
+              IntlPhoneField(
                           decoration: InputDecoration(
                             labelText: 'Phone',
                             labelStyle: TextStyle(
@@ -802,10 +802,10 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                          initialCountryCode: selectedCountry?.countryCode ?? 'AE',
-                          onChanged: (phone) => phoneNumber = phone.completeNumber,
-                          showCountryFlag: true,
-                        ),
+                initialCountryCode: selectedCountry?.countryCode ?? 'AE',
+                onChanged: (phone) => phoneNumber = phone.completeNumber,
+                showCountryFlag: true,
+              ),
                         const SizedBox(height: 24),
 
                         // Error message
@@ -889,7 +889,7 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
                         // Login link
                         Row(
@@ -902,7 +902,7 @@ class _SignupScreenState extends State<SignupScreen>
                                 fontSize: 15,
                               ),
                             ),
-                            TextButton(
+              TextButton(
                               onPressed: () {
                                 Navigator.pushReplacement(
                                   context,
