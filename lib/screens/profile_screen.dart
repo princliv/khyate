@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -23,11 +26,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final phone = TextEditingController();
 
   bool isLoading = true;
+  bool _isDarkMode = false;
 
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
     loadProfile();
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    await AuthService().signOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
   }
 
   Future<void> loadProfile() async {
@@ -56,8 +76,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(
-            content: Text("Profile updated"),
-            backgroundColor: Color(0xfff8e6da),
+            content: const Text("Profile updated"),
+            backgroundColor: const Color(0xFF21B998),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
@@ -69,82 +89,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required List<Widget> fields,
     required VoidCallback onSave,
   }) {
-    final isDark = widget.isDarkMode;
+    final isDark = _isDarkMode;
+    final Color dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final Color titleColor = isDark ? Colors.white : const Color(0xFF1A2332);
     
     showDialog(
       context: context,
       builder: (_) {
-        return Dialog(
-          backgroundColor: isDark ? Color(0xFF1E293B) : Color(0xfffdf4ee),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: dialogBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0),
+                    width: 1,
                   ),
                 ),
-                const SizedBox(height: 20),
-                ...fields,
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey,
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: titleColor,
+                          letterSpacing: 0.3,
+                        ),
                       ),
-                      child: const Text("Cancel"),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: onSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xfff8e6da),
-                        foregroundColor: Colors.black87,
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(height: 24),
+                      ...fields,
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: TextButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white70 : const Color(0xFF4A5568),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            ),
+                            child: const Text("Cancel"),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: onSave,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF21B998),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: const Text("Save Changes"),
+                          ),
+                        ],
                       ),
-                      child: const Text("Save Changes"),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget infoRow(String label, String value, Color textColor, IconData icon) {
+  Widget infoRow(String label, String value, Color textColor, IconData icon, bool isDark) {
+    final Color cardBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+    final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color valueColor = value.isNotEmpty 
+        ? textColor 
+        : (isDark ? Colors.white38 : Colors.grey[500]!);
+    final Color iconBg = isDark 
+        ? const Color(0xFF21B998).withOpacity(0.2) 
+        : const Color(0xFF21B998).withOpacity(0.15);
+    final Color iconColor = isDark ? const Color(0xFF21B998) : const Color(0xFF0097B2);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: widget.isDarkMode ? Color(0xFF374151) : Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Color(0xfff8e6da).withOpacity(0.3)),
+        border: Border.all(
+          color: isDark 
+              ? const Color(0xFF3A4555) 
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Color(0xfff8e6da).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
+              color: iconBg,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 20, color: Color(0xfff8e6da)),
+            child: Icon(icon, size: 20, color: iconColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -155,17 +216,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+                    color: labelColor,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   value.isNotEmpty ? value : "Not set",
                   style: TextStyle(
                     fontSize: 16,
-                    color: value.isNotEmpty ? textColor : Colors.grey,
+                    color: valueColor,
                     fontWeight: FontWeight.w600,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -183,82 +246,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
     VoidCallback? onEdit,
     required bool isDark,
   }) {
+    final Color cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final Color titleColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color borderColor = isDark 
+        ? const Color(0xFF3A4555) 
+        : const Color(0xFFE2E8F0);
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xfffdf4ee),
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Color(0xfff8e6da).withOpacity(0.2)),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: titleColor,
+                      letterSpacing: 0.3,
                     ),
-                    if (showEdit)
-                      InkWell(
-                        onTap: onEdit,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xfff8e6da), Color(0xfff5d9c8)],
+                  ),
+                  if (showEdit)
+                    InkWell(
+                      onTap: onEdit,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isDark
+                                ? [const Color(0xFF21B998), const Color(0xFF0097B2)]
+                                : [const Color(0xFF21B998), const Color(0xFF0097B2)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF21B998).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0xfff8e6da).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit, size: 16, color: Colors.black87),
-                              const SizedBox(width: 6),
-                              Text(
-                                "Edit",
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
-                      )
-                  ],
-                ),
-                const SizedBox(height: 20),
-                ...children,
-              ],
-            ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, size: 16, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Edit",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                ],
+              ),
+              const SizedBox(height: 24),
+              ...children,
+            ],
           ),
         ),
       ),
@@ -269,40 +339,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        backgroundColor: widget.isDarkMode ? Color(0xFF0F172A) : Color(0xFFFEFCF8),
+        backgroundColor: _isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFFEFCF8),
         body: Center(
           child: CircularProgressIndicator(
-            color: Color(0xfff8e6da),
+            color: const Color(0xFF21B998),
           ),
         ),
       );
     }
 
-    /// Theme Colors
-    final bool isDark = widget.isDarkMode;
+    /// Theme Colors with better contrast
+    final bool isDark = _isDarkMode;
     final Color bg = isDark ? const Color(0xFF0F172A) : const Color(0xFFFEFCF8);
-    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    const Color barColor = Color(0xFF111827);
 
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: isDark ? Color(0xFF111827) : Color(0xfffdf4ee),
+        backgroundColor: barColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "Profile",
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.bold,
+        leadingWidth: 200,
+        leading: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: SizedBox(
+            height: 35,
+            width: 140,
+            child: Image.asset(
+              'assets/company.png',
+              fit: BoxFit.contain,
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                if (wasSynchronouslyLoaded) return child;
+                return frame != null ? child : const SizedBox();
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.image, color: Colors.white, size: 35);
+              },
+            ),
           ),
         ),
-        centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person, color: Colors.white),
+            tooltip: 'Profile',
+            onPressed: () {
+              // Already on profile page
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Logout',
+            onPressed: () => _handleLogout(context),
+          ),
+          IconButton(
+            icon: Icon(
+              _isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+              color: Colors.white,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: _toggleTheme,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
 
       body: SingleChildScrollView(
@@ -312,55 +411,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Profile Header
+              // Profile Header with better contrast
               Container(
                 margin: const EdgeInsets.only(bottom: 24),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isDark 
-                      ? [Color(0xFF1E293B), Color(0xFF374151)]
-                      : [Color(0xfffdf4ee), Color(0xfff8e6da)],
+                      ? [const Color(0xFF1E293B), const Color(0xFF2D3748)]
+                      : [Colors.white, const Color(0xFFF7FAFC)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 70,
-                      height: 70,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Color(0xfff8e6da),
-                        border: Border.all(color: Colors.white, width: 3),
+                        gradient: LinearGradient(
+                          colors: [const Color(0xFF21B998), const Color(0xFF0097B2)],
+                        ),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          width: 4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF21B998).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Icon(
                         Icons.person,
-                        size: 35,
-                        color: Colors.black54,
+                        size: 40,
+                        color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 20),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "${firstName.text} ${lastName.text}",
+                            "${firstName.text} ${lastName.text}".trim().isEmpty 
+                                ? "User" 
+                                : "${firstName.text} ${lastName.text}",
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: textColor,
+                              letterSpacing: 0.3,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
-                            email.text,
+                            email.text.isEmpty ? "No email" : email.text,
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                              fontSize: 15,
+                              color: secondaryTextColor,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -375,9 +501,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: "Account Information",
                 isDark: isDark,
                 children: [
-                  infoRow("First Name", firstName.text, textColor, Icons.person),
-                  infoRow("Last Name", lastName.text, textColor, Icons.person_outline),
-                  infoRow("Email", email.text, textColor, Icons.email),
+                  infoRow("First Name", firstName.text, textColor, Icons.person, isDark),
+                  infoRow("Last Name", lastName.text, textColor, Icons.person_outline, isDark),
+                  infoRow("Email", email.text, textColor, Icons.email, isDark),
                 ],
               ),
 
@@ -390,8 +516,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   showEditDialog(
                     title: "Edit Personal Information",
                     fields: [
-                      _buildTextField(birthday, "Birthday", Icons.cake),
-                      _buildTextField(gender, "Gender", Icons.person),
+                      _buildDatePickerField(),
+                      _buildGenderRadioButtons(),
                       _buildTextField(emiratesId, "Emirates ID", Icons.badge),
                     ],
                     onSave: () {
@@ -406,9 +532,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                 },
                 children: [
-                  infoRow("Birthday", birthday.text, textColor, Icons.cake),
-                  infoRow("Gender", gender.text, textColor, Icons.person),
-                  infoRow("Emirates ID", emiratesId.text, textColor, Icons.badge),
+                  infoRow(
+                    "Birthday",
+                    birthday.text.isEmpty
+                        ? birthday.text
+                        : (() {
+                            try {
+                              return DateFormat('MMM dd, yyyy').format(
+                                DateFormat('yyyy-MM-dd').parse(birthday.text),
+                              );
+                            } catch (e) {
+                              return birthday.text;
+                            }
+                          })(),
+                    textColor,
+                    Icons.cake,
+                    isDark,
+                  ),
+                  infoRow("Gender", gender.text, textColor, Icons.person, isDark),
+                  infoRow("Emirates ID", emiratesId.text, textColor, Icons.badge, isDark),
                 ],
               ),
 
@@ -437,9 +579,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                 },
                 children: [
-                  infoRow("Address", address.text, textColor, Icons.home),
-                  infoRow("Country", country.text, textColor, Icons.flag),
-                  infoRow("Phone", phone.text, textColor, Icons.phone),
+                  infoRow("Address", address.text, textColor, Icons.home, isDark),
+                  infoRow("Country", country.text, textColor, Icons.flag, isDark),
+                  infoRow("Phone", phone.text, textColor, Icons.phone, isDark),
                 ],
               ),
             ],
@@ -450,33 +592,251 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
-    final isDark = widget.isDarkMode;
+    final isDark = _isDarkMode;
+    final Color fieldBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+    final Color focusColor = const Color(0xFF21B998);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
+        style: TextStyle(color: textColor, fontSize: 16),
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: Color(0xfff8e6da)),
+          prefixIcon: Icon(icon, color: focusColor),
           filled: true,
-          fillColor: isDark ? Color(0xFF374151) : Colors.white,
+          fillColor: fieldBg,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+            borderSide: BorderSide(color: borderColor, width: 1),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Color(0xfff8e6da).withOpacity(0.3)),
+            borderSide: BorderSide(color: borderColor, width: 1),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Color(0xfff8e6da)),
+            borderSide: BorderSide(color: focusColor, width: 2),
           ),
-          labelStyle: TextStyle(color: Colors.grey[600]),
+          labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
         ),
-        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
       ),
+    );
+  }
+
+  Widget _buildDatePickerField() {
+    final isDark = _isDarkMode;
+    final Color fieldBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+    final Color focusColor = const Color(0xFF21B998);
+
+    DateTime? selectedDate;
+    if (birthday.text.isNotEmpty) {
+      try {
+        selectedDate = DateFormat('yyyy-MM-dd').parse(birthday.text);
+      } catch (e) {
+        // Try alternative formats if needed
+        try {
+          selectedDate = DateFormat('MM/dd/yyyy').parse(birthday.text);
+        } catch (e2) {
+          selectedDate = null;
+        }
+      }
+    }
+
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        String displayText = birthday.text.isEmpty
+            ? "Select your birthday"
+            : (() {
+                try {
+                  return DateFormat('MMM dd, yyyy').format(
+                    DateFormat('yyyy-MM-dd').parse(birthday.text),
+                  );
+                } catch (e) {
+                  return birthday.text;
+                }
+              })();
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: InkWell(
+            onTap: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: selectedDate ?? DateTime.now(),
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: ColorScheme.dark(
+                        primary: focusColor,
+                        onPrimary: Colors.white,
+                        surface: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        onSurface: textColor,
+                      ),
+                      dialogBackgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (picked != null) {
+                birthday.text = DateFormat('yyyy-MM-dd').format(picked);
+                setDialogState(() {});
+                setState(() {});
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: fieldBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.cake, color: focusColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Birthday",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: labelColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          displayText,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: birthday.text.isEmpty ? labelColor : textColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.calendar_today, color: focusColor, size: 20),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGenderRadioButtons() {
+    final isDark = _isDarkMode;
+    final Color fieldBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+    final Color focusColor = const Color(0xFF21B998);
+
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        String selectedGender = gender.text;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: fieldBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.person, color: focusColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Gender",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: labelColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              RadioListTile<String>(
+                title: Text(
+                  "Male",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                value: "Male",
+                groupValue: selectedGender,
+                activeColor: focusColor,
+                onChanged: (String? value) {
+                  gender.text = value ?? "";
+                  setDialogState(() {});
+                  setState(() {});
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<String>(
+                title: Text(
+                  "Female",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                value: "Female",
+                groupValue: selectedGender,
+                activeColor: focusColor,
+                onChanged: (String? value) {
+                  gender.text = value ?? "";
+                  setDialogState(() {});
+                  setState(() {});
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<String>(
+                title: Text(
+                  "Others",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                value: "Others",
+                groupValue: selectedGender,
+                activeColor: focusColor,
+                onChanged: (String? value) {
+                  gender.text = value ?? "";
+                  setDialogState(() {});
+                  setState(() {});
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -140,17 +140,33 @@ Widget _buildCard(MembershipCarouselData card, BuildContext context) {
 
                 const SizedBox(height: 12),
 
-                /// FEATURES LIST
-                ...card.features.map(
-                  (f) => Row(
-                    children: [
-                      const Icon(Icons.check,
-                          color: Color(0xFF16AE8E), size: 18),
-                      const SizedBox(width: 5),
-                      Expanded(child: Text(f)),
-                    ],
-                  ),
-                ),
+/// TRAINER NAME
+if (card.mentor.isNotEmpty) ...[
+  Row(
+    children: [
+      const Icon(Icons.person, color: Colors.blueGrey, size: 18),
+      const SizedBox(width: 6),
+      Text(
+        "Trainer: ${card.mentor}",
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    ],
+  ),
+  const SizedBox(height: 12),
+],
+
+/// FEATURES LIST
+...card.features.map(
+  (f) => Row(
+    children: [
+      const Icon(Icons.check,
+          color: Color(0xFF16AE8E), size: 18),
+      const SizedBox(width: 5),
+      Expanded(child: Text(f)),
+    ],
+  ),
+),
+
 
                 const SizedBox(height: 15),
 
