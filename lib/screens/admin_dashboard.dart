@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -14,7 +15,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   @override
   void initState() {
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     super.initState();
   }
 
@@ -28,6 +29,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           tabs: [
             Tab(text: "Memberships (Carousel)"),
             Tab(text: "Fitness Cards"),
+            Tab(text: "Wellness Cards"),
+
           ],
         ),
       ),
@@ -36,6 +39,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         children: [
           MembershipCarouselManager(),
           FitnessMembershipCardManager(),
+          WellnessCardManager(),
+
         ],
       ),
     );

@@ -40,6 +40,7 @@ dependencies:
   google_sign_in: ^6.1.1
   intl_phone_field: ^3.2.0
   country_picker: ^2.0.20
+  provider: ^6.1.2
   # flutter_sms:
   #   git:
   #     url: https://github.com/fluttercommunity/flutter_sms.git

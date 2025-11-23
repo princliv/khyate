@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:khyate_b2b/models/cart_model.dart';
+import 'package:khyate_b2b/providers/cart_provider.dart';
+import 'package:provider/provider.dart';
 import '../models/membership_card_model.dart';   // <-- USE MODEL FROM MODELS FOLDER
 
 class MembershipCard extends StatelessWidget {
@@ -122,6 +125,31 @@ class MembershipCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  SizedBox(height: 12),
+
+ElevatedButton(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.pinkAccent,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  ),
+  onPressed: () {
+    Provider.of<CartProvider>(context, listen: false).addItem(
+      CartItem(
+        id: data.id,
+        title: data.title,
+        imageUrl: data.imageUrl,
+        price: int.parse(data.price),
+        type: "membership",
+      ),
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("${data.title} added to cart"))
+    );
+  },
+  child: Text("Add to Cart"),
+),
+
                 ],
               ),
             ),

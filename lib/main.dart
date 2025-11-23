@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';   // ✅ IMPORTANT
 import 'package:khyate_b2b/screens/onboarding_screen.dart';
+import 'package:khyate_b2b/providers/cart_provider.dart';    // ✅ YOUR CART PROVIDER
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +22,6 @@ void main() async {
       ),
     );
 
-    // 🔥 VERY IMPORTANT for Flutter Web
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: false,
     );
@@ -36,9 +37,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Khyate B2B',
-      home: OnboardingScreen(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => CartProvider(),     // ✅ PROVIDER INITIALIZED
+        ),
+      ],
+      child: MaterialApp(
+        title: 'Khyate B2B',
+        debugShowCheckedModeBanner: false,
+        home: OnboardingScreen(),
+      ),
     );
   }
 }
