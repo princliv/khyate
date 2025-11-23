@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
@@ -72,7 +74,60 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      await AuthService().signInWithGoogle();
+      final user = await AuthService().signInWithGoogle();
+      if (user != null) {
+        // Save Google user data to Firestore if not already exists
+        final uid = user.uid;
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        
+        if (!userDoc.exists) {
+          // Parse display name to firstName and lastName
+          String firstName = '';
+          String lastName = '';
+          if (user.displayName != null && user.displayName!.isNotEmpty) {
+            final nameParts = user.displayName!.trim().split(' ');
+            firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+            lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+          }
+          
+          // Save user data to Firestore
+          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+            'firstName': firstName,
+            'lastName': lastName,
+            'email': user.email ?? '',
+            'birthday': '',
+            'gender': '',
+            'emiratesId': '',
+            'address': '',
+            'country': '',
+            'phone': '',
+          }, SetOptions(merge: true));
+        } else {
+          // If document exists, update only firstName, lastName, and email if they're empty
+          final data = userDoc.data();
+          final updates = <String, dynamic>{};
+          
+          if (data?['firstName'] == null || (data?['firstName'] as String).isEmpty) {
+            if (user.displayName != null && user.displayName!.isNotEmpty) {
+              final nameParts = user.displayName!.trim().split(' ');
+              updates['firstName'] = nameParts.isNotEmpty ? nameParts[0] : '';
+              if (nameParts.length > 1) {
+                updates['lastName'] = nameParts.sublist(1).join(' ');
+              }
+            }
+          }
+          
+          if (data?['email'] == null || (data?['email'] as String).isEmpty) {
+            if (user.email != null && user.email!.isNotEmpty) {
+              updates['email'] = user.email;
+            }
+          }
+          
+          if (updates.isNotEmpty) {
+            await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
+          }
+        }
+      }
       if (!mounted) return;
       Navigator.pushReplacement(
         context, MaterialPageRoute(builder: (context) => const HomeScreen()));

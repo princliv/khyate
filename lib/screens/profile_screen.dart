@@ -35,6 +35,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
     loadProfile();
   }
 
+  void _showLogoutConfirmation(BuildContext context) {
+    final isDark = _isDarkMode;
+    final Color dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final Color titleColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color textColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: borderColor,
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    color: Colors.red,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Title
+                Text(
+                  'Are you sure you want to logout?',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: titleColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                // Message
+                Text(
+                  'You will need to sign in again to access your account.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: textColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                // Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: textColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _handleLogout(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogout(BuildContext context) async {
     await AuthService().signOut();
     if (!context.mounted) return;
@@ -51,10 +149,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> loadProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid;
     if (uid != null) {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       final data = doc.data();
+      
+      // Load from Firestore if available
       if (data != null) {
         firstName.text = data['firstName'] ?? '';
         lastName.text = data['lastName'] ?? '';
@@ -65,6 +166,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         address.text = data['address'] ?? '';
         country.text = data['country'] ?? '';
         phone.text = data['phone'] ?? '';
+      }
+      
+      // If firstName, lastName, or email are empty, try to get from Firebase Auth user object
+      if (user != null) {
+        if (firstName.text.isEmpty || lastName.text.isEmpty) {
+          if (user.displayName != null && user.displayName!.isNotEmpty) {
+            final nameParts = user.displayName!.trim().split(' ');
+            if (firstName.text.isEmpty && nameParts.isNotEmpty) {
+              firstName.text = nameParts[0];
+            }
+            if (lastName.text.isEmpty && nameParts.length > 1) {
+              lastName.text = nameParts.sublist(1).join(' ');
+            }
+          }
+        }
+        
+        if (email.text.isEmpty && user.email != null && user.email!.isNotEmpty) {
+          email.text = user.email!;
+        }
       }
     }
     setState(() => isLoading = false);
@@ -390,7 +510,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Logout',
-            onPressed: () => _handleLogout(context),
+            onPressed: () => _showLogoutConfirmation(context),
           ),
           IconButton(
             icon: Icon(
