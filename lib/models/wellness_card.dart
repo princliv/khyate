@@ -30,7 +30,7 @@ class WellnessCard {
       description: data['description'] ?? '',
       category: data['category'] ?? '',
       duration: data['duration'] ?? '',
-      mentor: data['mentor'] ?? '',
+      mentor: data.containsKey('mentor') ? data['mentor'] ?? '' : '',
       price: data['price'] ?? '',
     );
   }
