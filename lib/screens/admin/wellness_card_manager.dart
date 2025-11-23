@@ -13,19 +13,33 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
   final _description = TextEditingController();
   final _category = TextEditingController();
   final _duration = TextEditingController();
-  final _mentor = TextEditingController();
   final _price = TextEditingController();
+
+  String? selectedTrainer;  
+  List<DocumentSnapshot> trainers = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    // FETCH TRAINERS FROM FIRESTORE
+    FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
+      setState(() {
+        trainers = snap.docs;
+      });
+    });
+  }
 
   void _addWellnessCard() {
     FirebaseFirestore.instance.collection("wellnesscards").add({
-      "imageUrl": _imageUrl.text,
-      "title": _title.text,
-      "subtitle": _subtitle.text,
-      "description": _description.text,
-      "category": _category.text,
-      "duration": _duration.text,
-      "mentor": _mentor.text,
-      "price": _price.text,
+      "imageUrl": _imageUrl.text.trim(),
+      "title": _title.text.trim(),
+      "subtitle": _subtitle.text.trim(),
+      "description": _description.text.trim(),
+      "category": _category.text.trim(),
+      "duration": _duration.text.trim(),
+      "mentor": selectedTrainer ?? "No Trainer Assigned",
+      "price": _price.text.trim(),
     });
 
     _imageUrl.clear();
@@ -34,8 +48,10 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
     _description.clear();
     _category.clear();
     _duration.clear();
-    _mentor.clear();
     _price.clear();
+    selectedTrainer = null;
+
+    setState(() {});
   }
 
   void _delete(String id) {
@@ -64,7 +80,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
 
                   return ListTile(
                     title: Text(d['title']),
-                    subtitle: Text("${d['category']} • ${d['duration']}"),
+                    subtitle: Text("${d['category']} • ${d['duration']} • 👤 ${d['mentor']}"),
                     trailing: IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _delete(d.id),
@@ -83,6 +99,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _field(_imageUrl, "Image URL"),
           _field(_title, "Title"),
@@ -90,8 +107,39 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
           _field(_description, "Description"),
           _field(_category, "Category"),
           _field(_duration, "Duration"),
-          _field(_mentor, "Mentor"),
           _field(_price, "Price"),
+
+          SizedBox(height: 10),
+
+          Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
+
+          Container(
+            margin: EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: DropdownButton<String>(
+              hint: Text("Choose Trainer"),
+              value: selectedTrainer,
+              isExpanded: true,
+              underline: SizedBox(),
+              items: trainers.map((t) {
+                return DropdownMenuItem<String>(
+                  value: t["name"],
+                  child: Text(t["name"]),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedTrainer = value;
+                });
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
 
           ElevatedButton(
             onPressed: _addWellnessCard,
