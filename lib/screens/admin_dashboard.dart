@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
+import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -14,7 +16,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   @override
   void initState() {
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     super.initState();
   }
 
@@ -28,6 +30,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           tabs: [
             Tab(text: "Memberships (Carousel)"),
             Tab(text: "Fitness Cards"),
+            Tab(text: "Wellness Cards"),
+            Tab(text: "Trainers"),
+
           ],
         ),
       ),
@@ -36,6 +41,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         children: [
           MembershipCarouselManager(),
           FitnessMembershipCardManager(),
+          WellnessCardManager(),
+          TrainerManager(), 
+
         ],
       ),
     );
@@ -57,6 +65,22 @@ class _MembershipCarouselManagerState
   final _price = TextEditingController();
   final _features = TextEditingController();
 
+  // TRAINER DROPDOWN VARIABLES
+  String? selectedTrainer;
+  List<DocumentSnapshot> trainers = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Fetch trainer list from Firestore
+    FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
+      setState(() {
+        trainers = snap.docs;
+      });
+    });
+  }
+
   void _addMembership() {
     FirebaseFirestore.instance.collection("memberships").add({
       "imageUrl": _imageUrl.text,
@@ -66,6 +90,7 @@ class _MembershipCarouselManagerState
       "title": _title.text,
       "price": _price.text,
       "features": _features.text.split(","),
+      "mentor": selectedTrainer ?? "No Trainer Assigned",
       "isPurchased": false,
     });
 
@@ -76,6 +101,9 @@ class _MembershipCarouselManagerState
     _title.clear();
     _price.clear();
     _features.clear();
+    selectedTrainer = null;
+
+    setState(() {});
   }
 
   void _delete(String id) {
@@ -89,8 +117,9 @@ class _MembershipCarouselManagerState
         _inputForm(),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream:
-                FirebaseFirestore.instance.collection("memberships").snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection("memberships")
+                .snapshots(),
             builder: (context, snap) {
               if (!snap.hasData) {
                 return Center(child: CircularProgressIndicator());
@@ -104,7 +133,7 @@ class _MembershipCarouselManagerState
                   final d = docs[i];
                   return ListTile(
                     title: Text(d['title']),
-                    subtitle: Text(d['type']),
+                    subtitle: Text("Type: ${d['type']}  | Trainer: ${d['mentor']}"),
                     trailing: IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _delete(d.id),
@@ -123,6 +152,7 @@ class _MembershipCarouselManagerState
     return Padding(
       padding: EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _field(_imageUrl, "Image URL"),
           _field(_tag, "Tag"),
@@ -131,9 +161,42 @@ class _MembershipCarouselManagerState
           _field(_title, "Title"),
           _field(_price, "Price"),
           _field(_features, "Features (comma separated)"),
+
+          SizedBox(height: 10),
+
+          // TRAINER DROPDOWN
+          Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
+          Container(
+            margin: EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: DropdownButton<String>(
+              hint: Text("Choose Trainer"),
+              value: selectedTrainer,
+              isExpanded: true,
+              underline: SizedBox(),
+              items: trainers.map((t) {
+                return DropdownMenuItem<String>(
+                  value: t["name"],
+                  child: Text(t["name"]),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedTrainer = value;
+                });
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
+
           ElevatedButton(
             onPressed: _addMembership,
-            child: Text("Add Membership"),
+            child: Text("Add Membership Carousel Card"),
           )
         ],
       ),
@@ -165,31 +228,48 @@ class _FitnessMembershipCardManagerState
   final _category = TextEditingController();
   final _price = TextEditingController();
   final _title = TextEditingController();
+  final _subtitle = TextEditingController();
   final _description = TextEditingController();
-  final _time = TextEditingController();
-  final _mentor = TextEditingController();
-  final _reviews = TextEditingController();
+  final _duration = TextEditingController();
+
+  String? selectedTrainer;
+  List<DocumentSnapshot> trainers = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    // FETCH TRAINERS FROM FIRESTORE
+    FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
+      setState(() {
+        trainers = snap.docs;
+      });
+    });
+  }
 
   void _addCard() {
     FirebaseFirestore.instance.collection("membershipcards").add({
-      "imageUrl": _imageUrl.text,
-      "category": _category.text,
-      "price": _price.text,
-      "title": _title.text,
-      "description": _description.text,
-      "time": _time.text,
-      "mentor": _mentor.text,
-      "reviews": _reviews.text,
+      "imageUrl": _imageUrl.text.trim(),
+      "category": _category.text.trim(),
+      "price": _price.text.trim(),
+      "title": _title.text.trim(),
+      "subtitle": _subtitle.text.trim(),
+      "description": _description.text.trim(),
+      "duration": _duration.text.trim(),
+      "mentor": selectedTrainer ?? "No Trainer Assigned",
     });
 
+    // CLEAR FIELDS
     _imageUrl.clear();
     _category.clear();
     _price.clear();
     _title.clear();
+    _subtitle.clear();
     _description.clear();
-    _time.clear();
-    _mentor.clear();
-    _reviews.clear();
+    _duration.clear();
+    selectedTrainer = null;
+
+    setState(() {});
   }
 
   void _delete(String id) {
@@ -207,7 +287,9 @@ class _FitnessMembershipCardManagerState
                 .collection("membershipcards")
                 .snapshots(),
             builder: (context, snap) {
-              if (!snap.hasData) return Center(child: CircularProgressIndicator());
+              if (!snap.hasData) {
+                return Center(child: CircularProgressIndicator());
+              }
 
               final docs = snap.data!.docs;
 
@@ -217,7 +299,7 @@ class _FitnessMembershipCardManagerState
                   final d = docs[i];
                   return ListTile(
                     title: Text(d['title']),
-                    subtitle: Text(d['category']),
+                    subtitle: Text("Category: ${d['category']}"),
                     trailing: IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _delete(d.id),
@@ -236,15 +318,48 @@ class _FitnessMembershipCardManagerState
     return Padding(
       padding: EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _field(_imageUrl, "Image URL"),
           _field(_category, "Category"),
           _field(_price, "Price"),
           _field(_title, "Title"),
+          _field(_subtitle, "Subtitle"),
           _field(_description, "Description"),
-          _field(_time, "Time"),
-          _field(_mentor, "Mentor"),
-          _field(_reviews, "Reviews"),
+          _field(_duration, "Duration"),
+
+          SizedBox(height: 10),
+
+          // TRAINER DROPDOWN
+          Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
+          Container(
+            margin: EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: DropdownButton<String>(
+              hint: Text("Choose Trainer"),
+              value: selectedTrainer,
+              isExpanded: true,
+              underline: SizedBox(),
+              items: trainers.map((t) {
+                return DropdownMenuItem<String>(
+                  value: t["name"],
+                  child: Text(t["name"]),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedTrainer = value;
+                });
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
+
           ElevatedButton(
             onPressed: _addCard,
             child: Text("Add Fitness Card"),

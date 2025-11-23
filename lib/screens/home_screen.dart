@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:khyate_b2b/screens/cart_screen.dart';
 import 'package:khyate_b2b/screens/fitness_screen.dart';
+import 'package:khyate_b2b/screens/wellness_screen.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/hero_section.dart';
@@ -33,25 +35,15 @@ class HomeScreen extends StatelessWidget {
           icon: Icons.fitness_center,
           builder: (ctx, isDarkMode) => FitnessScreen(isDarkMode: isDarkMode),
         ),
+          AppShellPage(
+    label: 'Wellness',
+    icon: Icons.spa,
+    builder: (ctx, isDarkMode) => WellnessScreen(isDarkMode: isDarkMode),
+  ),
         AppShellPage(
-          label: 'Wellness',
-          icon: Icons.spa,
-          builder: (ctx, isDarkMode) => _HomeSection(
-            title: 'Wellness Insights',
-            description:
-                'Mindfulness routines, nutrition advice, and daily rituals to keep you balanced.',
-            isDarkMode: isDarkMode,
-          ),
-        ),
-        AppShellPage(
-          label: 'Liveness',
-          icon: Icons.favorite,
-          builder: (ctx, isDarkMode) => _HomeSection(
-            title: 'Liveness Experiences',
-            description:
-                'Engage with vibrant communities, live sessions, and events curated for you.',
-            isDarkMode: isDarkMode,
-          ),
+          label: 'Cart',
+          icon: Icons.shopping_cart_checkout_rounded,
+         builder: (ctx,  isDarkMode) => CartScreen(isDarkMode: isDarkMode),
         ),
       ],
     );

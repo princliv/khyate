@@ -279,7 +279,7 @@ Stream<List<MembershipCardData>> getMembershipsStream() {
               ],
             ),
             SizedBox(
-  height: 340,
+  height: 430,
   child: StreamBuilder<List<MembershipCardData>>(
     stream: getMembershipsStream(),
     builder: (context, snapshot) {
