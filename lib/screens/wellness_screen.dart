@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:khyate_b2b/models/cart_model.dart';
 import 'package:khyate_b2b/providers/cart_provider.dart';
+import 'package:khyate_b2b/services/purchase_status_service.dart';
 import 'package:provider/provider.dart';
 import '../widgets/fitness_sessions_grid.dart';
 
@@ -178,26 +179,50 @@ StreamBuilder<QuerySnapshot>(
               ),
               SizedBox(height: 12),
 
-ElevatedButton(
-  onPressed: () {
-    Provider.of<CartProvider>(context, listen: false).addItem(
-      CartItem(
-        id: d.id,
-        title: d['title'],
-        imageUrl: d['imageUrl'],
-        price: int.parse(d['price']),
-        type: "wellness",
+FutureBuilder<bool>(
+  future: PurchaseStatusService.isPurchased(d.id),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return CircularProgressIndicator();
+    }
+
+    final purchased = snapshot.data!;
+
+    if (purchased) {
+      return Container(
+        height: 45,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.grey,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text("Purchased", style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    return ElevatedButton(
+      onPressed: () {
+        Provider.of<CartProvider>(context, listen: false).addItem(
+          CartItem(
+            id: d.id,
+            title: d['title'],
+            imageUrl: d['imageUrl'],
+            price: int.parse(d['price']),
+            type: "wellness",
+          ),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.teal,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
+      child: Text("Add to Cart"),
     );
   },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.teal,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-  ),
-  child: Text("Add to Cart"),
-),
+)
+
 
             ],
           ),

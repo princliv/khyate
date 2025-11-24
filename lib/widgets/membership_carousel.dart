@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:khyate_b2b/models/cart_model.dart';
 import 'package:khyate_b2b/models/membership_model.dart';
 import 'package:khyate_b2b/providers/cart_provider.dart';
+import 'package:khyate_b2b/services/purchase_status_service.dart';
 import 'package:provider/provider.dart';
 
 class MembershipCarousel extends StatelessWidget {
@@ -170,25 +171,50 @@ if (card.mentor.isNotEmpty) ...[
 
                 const SizedBox(height: 15),
 
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    Provider.of<CartProvider>(context, listen: false).addItem(
-                      CartItem(
-                        id: card.id,
-                        title: card.title,
-                        imageUrl: card.imageUrl,
-                        price: int.parse(card.price),
-                        type: "membership_carousel",
-                      ),
-                    );
-                  },
-                  child: const Text("Add to Cart"),
-                ),
+                FutureBuilder<bool>(
+  future: PurchaseStatusService.isPurchased(card.id),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return CircularProgressIndicator();
+    }
+
+    final purchased = snapshot.data!;
+
+    if (purchased) {
+      return Container(
+        height: 45,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.grey,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text("Purchased", style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.teal,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      onPressed: () {
+        Provider.of<CartProvider>(context, listen: false).addItem(
+          CartItem(
+            id: card.id,
+            title: card.title,
+            imageUrl: card.imageUrl,
+            price: int.parse(card.price),
+            type: "membership_carousel",
+          ),
+        );
+      },
+      child: Text("Add to Cart"),
+    );
+  },
+)
+
               ],
             ),
           ),

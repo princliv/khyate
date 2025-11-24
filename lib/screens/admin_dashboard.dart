@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
 import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
+import 'package:khyate_b2b/screens/purchase_list_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -132,13 +133,34 @@ class _MembershipCarouselManagerState
                 itemBuilder: (context, i) {
                   final d = docs[i];
                   return ListTile(
-                    title: Text(d['title']),
-                    subtitle: Text("Type: ${d['type']}  | Trainer: ${d['mentor']}"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
-                    ),
-                  );
+  title: Text(d['title']),
+  subtitle: Text("Type: ${d['type']} | Trainer: ${d['mentor']}"),
+  trailing: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      IconButton(
+        icon: Icon(Icons.people, color: Colors.blue),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PurchaseListScreen(
+                cardId: d.id,
+                cardTitle: d["title"],
+              ),
+            ),
+          );
+        },
+      ),
+
+      IconButton(
+        icon: Icon(Icons.delete, color: Colors.red),
+        onPressed: () => _delete(d.id),
+      ),
+    ],
+  ),
+);
+
                 },
               );
             },
@@ -297,14 +319,35 @@ class _FitnessMembershipCardManagerState
                 itemCount: docs.length,
                 itemBuilder: (context, i) {
                   final d = docs[i];
-                  return ListTile(
-                    title: Text(d['title']),
-                    subtitle: Text("Category: ${d['category']}"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
-                    ),
-                  );
+return ListTile(
+  title: Text(d['title']),
+  subtitle: Text("Category: ${d['category']} | Trainer: ${d['mentor']}"),
+  trailing: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      IconButton(
+        icon: Icon(Icons.people, color: Colors.blue),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PurchaseListScreen(
+                cardId: d.id,
+                cardTitle: d["title"],
+              ),
+            ),
+          );
+        },
+      ),
+      IconButton(
+        icon: Icon(Icons.delete, color: Colors.red),
+        onPressed: () => _delete(d.id),
+      ),
+    ],
+  ),
+);
+
+
                 },
               );
             },

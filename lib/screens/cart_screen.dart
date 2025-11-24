@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../services/purchase_service.dart';   // ✅ ADD THIS IMPORT
 
 class CartScreen extends StatelessWidget {
   final bool isDarkMode;
@@ -43,8 +44,7 @@ class CartScreen extends StatelessWidget {
                       final item = cart.items[index];
 
                       return Container(
-                        margin:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(12),
@@ -104,8 +104,20 @@ class CartScreen extends StatelessWidget {
                         ],
                       ),
                       SizedBox(height: 12),
+
+                      /// ------------------------------
+                      ///  🔥 NEW CHECKOUT LOGIC USING SERVICE
+                      /// ------------------------------
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          await PurchaseService.completePurchase(cart.items);
+
+                          cart.clearCart();
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Purchase successful!")),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isDarkMode ? Colors.greenAccent : Colors.green,

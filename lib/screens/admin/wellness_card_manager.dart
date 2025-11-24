@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:khyate_b2b/screens/purchase_list_screen.dart';
 
 class WellnessCardManager extends StatefulWidget {
   @override
@@ -79,13 +80,36 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                   final d = docs[i];
 
                   return ListTile(
-                    title: Text(d['title']),
-                    subtitle: Text("${d['category']} • ${d['duration']} • 👤 ${d['mentor']}"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
-                    ),
-                  );
+  title: Text(d['title']),
+  subtitle: Text("${d['category']} • ${d['duration']} • 👤 ${d['mentor']}"),
+  trailing: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      // 🔵 VIEW PURCHASED USERS BUTTON
+      IconButton(
+        icon: Icon(Icons.people, color: Colors.blue),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PurchaseListScreen(
+                cardId: d.id,
+                cardTitle: d["title"],
+              ),
+            ),
+          );
+        },
+      ),
+
+      // 🔴 DELETE BUTTON
+      IconButton(
+        icon: Icon(Icons.delete, color: Colors.red),
+        onPressed: () => _delete(d.id),
+      ),
+    ],
+  ),
+);
+
                 },
               );
             },
