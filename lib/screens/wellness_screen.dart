@@ -5,11 +5,34 @@ import 'package:khyate_b2b/providers/cart_provider.dart';
 import 'package:khyate_b2b/services/purchase_status_service.dart';
 import 'package:provider/provider.dart';
 import '../widgets/fitness_sessions_grid.dart';
+import '../widgets/fitness_session_modal.dart';
 
 class WellnessScreen extends StatelessWidget {
   final bool isDarkMode;
 
   const WellnessScreen({super.key, required this.isDarkMode});
+
+  // Session descriptions map
+  static const Map<String, String> sessionDescriptions = {
+    "OUTCALM": "OutCalm is a deeply relaxing meditation and sound bath session designed to soothe your mind and body. Gentle breathwork, calming soundscapes, and subtle aromatherapy help you unwind, reduce stress, and leave feeling refreshed.\n\nOutCalm is perfect for all levels and offered in 30 or 45-minute sessions.",
+    "OUTROOT": "OutRoot is a grounding, nature-inspired session that blends gentle breathwork and slow movement to help you reconnect with the present. Held outdoors whenever possible, this practice uses simple grounding exercises and light stretches to restore balance and inner calm.\n\nOutRoot is suitable for all levels and offered in 30 or 45 minute sessions.",
+    "OUTCREATE": "OutCreate is a playful, art-based workshop designed to spark creativity and ease the mind. Participants draw, paint, or craft as they move gently and breathe mindfully — releasing tension and self-judgment.\n\nOutCreate is perfect for all skill levels and offered in 45 minute sessions.",
+    "OUTFLOW": "OutFlow is a free-form movement session that invites you to dance, stretch, and flow without judgment. Inspired by intuitive movement and set to uplifting music, it's all about releasing energy and finding joy in your body.\n\nOutFlow is suitable for everyone and offered in 30 or 45 minute sessions.",
+    "OUTGLOW": "OutGlow is a gentle yoga session illuminated by candlelight, encouraging relaxation and self-care. Soft stretches, deep breaths, and calming poses help you release tension and leave with a warm inner glow.\n\nOutGlow is open to all levels and offered in 45 minute sessions.",
+    "OUTSOUND": "OutSound is an immersive sound-healing session using gongs, singing bowls, and chimes to realign your energy. Let the vibrations wash over you as you sink into deep relaxation.\n\nOutSound is perfect for all levels and offered in 45 minute sessions.",
+    "OUTDREAM": "OutDream is a guided visualization and relaxation practice that taps into your imagination. Gentle cues help you drift into a dream-like state, melting away stress and leaving you inspired and at ease.\n\nOutDream is suitable for all levels and offered in 30 minute sessions.",
+  };
+
+  // Session image paths map (supports both network URLs and local assets)
+  static const Map<String, String> sessionImages = {
+    "OUTCALM": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=400&fit=crop&q=80", // Meditation
+    "OUTROOT": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=400&fit=crop&q=80", // Nature/grounding
+    "OUTCREATE": "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=400&fit=crop&q=80", // Art/creativity
+    "OUTFLOW": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=400&fit=crop&q=80", // Movement/dance
+    "OUTGLOW": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=400&fit=crop&q=80", // Yoga/candlelight
+    "OUTSOUND": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop&q=80", // Sound healing
+    "OUTDREAM": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop&q=80", // Dream/visualization
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +49,83 @@ class WellnessScreen extends StatelessWidget {
     /// WELLNESS SESSIONS (icons only top section)
     /// --------------------------------------------------------
     final sessions = [
-      FitnessSession(label: "OUTCALM", icon: Icons.self_improvement, onTap: () {}),
-      FitnessSession(label: "OUTROOT", icon: Icons.yard, onTap: () {}),
-      FitnessSession(label: "OUTCREATE", icon: Icons.brush, onTap: () {}),
-      FitnessSession(label: "OUTFLOW", icon: Icons.waterfall_chart, onTap: () {}),
-      FitnessSession(label: "OUTGLOW", icon: Icons.wb_incandescent, onTap: () {}),
-      FitnessSession(label: "OUTSOUND", icon: Icons.music_note, onTap: () {}),
-      FitnessSession(label: "OUTDREAM", icon: Icons.nights_stay, onTap: () {}),
+      FitnessSession(
+        label: "OUTCALM",
+        icon: Icons.self_improvement,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutCalm",
+          sessionDescriptions["OUTCALM"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTCALM"],
+        ),
+      ),
+      FitnessSession(
+        label: "OUTROOT",
+        icon: Icons.yard,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutRoot",
+          sessionDescriptions["OUTROOT"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTROOT"],
+        ),
+      ),
+      FitnessSession(
+        label: "OUTCREATE",
+        icon: Icons.brush,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutCreate",
+          sessionDescriptions["OUTCREATE"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTCREATE"],
+        ),
+      ),
+      FitnessSession(
+        label: "OUTFLOW",
+        icon: Icons.waterfall_chart,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutFlow",
+          sessionDescriptions["OUTFLOW"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTFLOW"],
+        ),
+      ),
+      FitnessSession(
+        label: "OUTGLOW",
+        icon: Icons.wb_incandescent,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutGlow",
+          sessionDescriptions["OUTGLOW"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTGLOW"],
+        ),
+      ),
+      FitnessSession(
+        label: "OUTSOUND",
+        icon: Icons.music_note,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutSound",
+          sessionDescriptions["OUTSOUND"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTSOUND"],
+        ),
+      ),
+      FitnessSession(
+        label: "OUTDREAM",
+        icon: Icons.nights_stay,
+        onTap: () => FitnessSessionModal.show(
+          context,
+          "OutDream",
+          sessionDescriptions["OUTDREAM"]!,
+          isDarkMode,
+          imagePath: sessionImages["OUTDREAM"],
+        ),
+      ),
     ];
 
     return Scaffold(
