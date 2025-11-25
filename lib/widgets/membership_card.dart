@@ -48,6 +48,7 @@ class MembershipCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // CATEGORY + PRICE ROW
                   Row(
                     children: [
                       Container(
@@ -77,6 +78,8 @@ class MembershipCard extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 8),
+
+                  // TITLE
                   Text(
                     data.title,
                     style: TextStyle(
@@ -85,6 +88,8 @@ class MembershipCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 6),
+
+                  // DESCRIPTION
                   Text(
                     data.description,
                     style: TextStyle(
@@ -93,117 +98,116 @@ class MembershipCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 12),
+
+                  // TIME + DATE ROW
                   Row(
-  children: [
-    /// TIME
-    Icon(Icons.access_time, color: Color(0xFFDF50B7), size: 16),
-    SizedBox(width: 4),
-    Text(
-      data.time,        // TIME stays here
-      style: TextStyle(
-        color: Colors.black54,
-        fontSize: 13,
-      ),
-    ),
+                    children: [
+                      Icon(Icons.access_time, color: Color(0xFFDF50B7), size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        data.time,
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
+                      ),
+                      SizedBox(width: 12),
+                      Icon(Icons.calendar_today, color: Color(0xFFDF50B7), size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        data.date,
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
 
-    SizedBox(width: 12),
-
-    /// DATE (NEW)
-    Icon(Icons.calendar_today, color: Color(0xFFDF50B7), size: 16),
-    SizedBox(width: 4),
-    Text(
-      data.date,        // ADD THIS FIELD
-      style: TextStyle(
-        color: Colors.black54,
-        fontSize: 13,
-      ),
-    ),
-
-    SizedBox(width: 12),
-
-    /// TRAINER (MENTOR)
-    Text(
-      data.mentor,
-      style: TextStyle(
-        color: Colors.black54,
-        fontSize: 13,
-      ),
-    ),
-  ],
-),
-
+                  // LOCATION + TRAINER ROW
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, color: Color(0xFFDF50B7), size: 16),
+                      SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          data.location,
+                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        data.mentor,
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
+                      ),
+                    ],
+                  ),
                   SizedBox(height: 8),
+
+                  // REVIEWS
                   Row(
                     children: [
                       Icon(Icons.star_border, color: Colors.black38, size: 16),
                       Text(
                         data.reviews,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
                       ),
                     ],
                   ),
                   SizedBox(height: 12),
 
-FutureBuilder<bool>(
-  future: PurchaseStatusService.isPurchased(data.id),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return SizedBox(
-        height: 45,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
+                  // ADD TO CART / PURCHASED BUTTON
+                  FutureBuilder<bool>(
+                    future: PurchaseStatusService.isPurchased(data.id),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return SizedBox(
+                          height: 45,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
 
-    final purchased = snapshot.data!;
+                      final purchased = snapshot.data!;
 
-    if (purchased) {
-     return Column(
-  children: [
-    Container(
-      height: 45,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.grey,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text("Purchased", style: TextStyle(color: Colors.white)),
-    ),
-    const SizedBox(height: 10),
-    ReviewWidget(cardId: data.id),
-  ],
-);
+                      if (purchased) {
+                        return Column(
+                          children: [
+                            Container(
+                              height: 45,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.grey,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text("Purchased", style: TextStyle(color: Colors.white)),
+                            ),
+                            const SizedBox(height: 10),
+                            ReviewWidget(cardId: data.id),
+                          ],
+                        );
+                      }
 
-    }
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.pinkAccent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Provider.of<CartProvider>(context, listen: false).addItem(
+                            CartItem(
+                              id: data.id,
+                              title: data.title,
+                              imageUrl: data.imageUrl,
+                              price: int.parse(data.price),
+                              type: "membership",
+                            ),
+                          );
 
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.pinkAccent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      onPressed: () {
-        Provider.of<CartProvider>(context, listen: false).addItem(
-          CartItem(
-            id: data.id,
-            title: data.title,
-            imageUrl: data.imageUrl,
-            price: int.parse(data.price),
-            type: "membership",
-          ),
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("${data.title} added to cart")),
-        );
-      },
-      child: Text("Add to Cart"),
-    );
-  },
-)
-
-
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("${data.title} added to cart")),
+                          );
+                        },
+                        child: Text("Add to Cart"),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

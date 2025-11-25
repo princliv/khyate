@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
 import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
 import 'package:khyate_b2b/screens/purchase_list_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -65,6 +68,8 @@ class _MembershipCarouselManagerState
   final _title = TextEditingController();
   final _price = TextEditingController();
   final _features = TextEditingController();
+  final _location = TextEditingController();
+
 
   // TRAINER DROPDOWN VARIABLES
   String? selectedTrainer;
@@ -85,19 +90,20 @@ class _MembershipCarouselManagerState
   }
 
   void _addMembership() {
-    FirebaseFirestore.instance.collection("memberships").add({
-      "imageUrl": _imageUrl.text,
-      "tag": _tag.text,
-      "classes": _classes.text,
-      "type": _type.text,
-      "title": _title.text,
-      "price": _price.text,
-      "features": _features.text.split(","),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-      "isPurchased": false,
-      "date": selectedDate ?? "",
+FirebaseFirestore.instance.collection("memberships").add({
+  "imageUrl": _imageUrl.text,
+  "tag": _tag.text,
+  "classes": _classes.text,
+  "type": _type.text,
+  "title": _title.text,
+  "price": _price.text,
+  "features": _features.text.split(","),
+  "mentor": selectedTrainer ?? "No Trainer Assigned",
+  "isPurchased": false,
+  "date": selectedDate ?? "",
+  "location": _location.text.trim(),  // <-- NEW
+});
 
-    });
 
     _imageUrl.clear();
     _tag.clear();
@@ -187,6 +193,8 @@ class _MembershipCarouselManagerState
           _field(_title, "Title"),
           _field(_price, "Price"),
           _field(_features, "Features (comma separated)"),
+          _field(_location, "Location (Optional)"),
+
 
           SizedBox(height: 10),
           Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -289,6 +297,8 @@ class _FitnessMembershipCardManagerState
   final _subtitle = TextEditingController();
   final _description = TextEditingController();
   final _duration = TextEditingController();
+  final _location = TextEditingController();
+
 
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
@@ -308,18 +318,19 @@ class _FitnessMembershipCardManagerState
   }
 
   void _addCard() {
-    FirebaseFirestore.instance.collection("membershipcards").add({
-      "imageUrl": _imageUrl.text.trim(),
-      "category": _category.text.trim(),
-      "price": _price.text.trim(),
-      "title": _title.text.trim(),
-      "subtitle": _subtitle.text.trim(),
-      "description": _description.text.trim(),
-      "duration": _duration.text.trim(),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-      "date": selectedDate ?? "",
+FirebaseFirestore.instance.collection("membershipcards").add({
+  "imageUrl": _imageUrl.text.trim(),
+  "category": _category.text.trim(),
+  "price": _price.text.trim(),
+  "title": _title.text.trim(),
+  "subtitle": _subtitle.text.trim(),
+  "description": _description.text.trim(),
+  "duration": _duration.text.trim(),
+  "mentor": selectedTrainer ?? "No Trainer Assigned",
+  "date": selectedDate ?? "",
+  "location": _location.text.trim(),  // <-- NEW
+});
 
-    });
 
     // CLEAR FIELDS
     _imageUrl.clear();
@@ -343,6 +354,26 @@ class _FitnessMembershipCardManagerState
     return Column(
       children: [
         _inputForm(),
+        ElevatedButton(
+  onPressed: () async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude);
+      String address =
+          "${placemarks.first.locality}, ${placemarks.first.country}";
+      setState(() {
+        _location.text = address;
+      });
+    } catch (e) {
+      print("Error fetching location: $e");
+    }
+  },
+  child: Text("Use Current Location"),
+),
+
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
@@ -410,6 +441,8 @@ return ListTile(
           _field(_subtitle, "Subtitle"),
           _field(_description, "Description"),
           _field(_duration, "Duration"),
+          _field(_location, "Location (Optional)"),
+
 
           SizedBox(height: 10),
           Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),

@@ -203,6 +203,23 @@ class MembershipCarousel extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
+                  /// LOCATION
+if (card.location.isNotEmpty) ...[
+  Row(
+    children: [
+      const Icon(Icons.location_on,
+          size: 16, color: Colors.redAccent),
+      const SizedBox(width: 6),
+      Text(
+        "Location: ${card.location}",
+        style: const TextStyle(
+            fontSize: 14, color: Colors.black87),
+      ),
+    ],
+  ),
+  const SizedBox(height: 12),
+],
+
 
                   /// FEATURES LIST
                   ...card.features.map(
