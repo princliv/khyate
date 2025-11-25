@@ -69,6 +69,8 @@ class _MembershipCarouselManagerState
   // TRAINER DROPDOWN VARIABLES
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
+  String? selectedDate;
+
 
   @override
   void initState() {
@@ -93,6 +95,8 @@ class _MembershipCarouselManagerState
       "features": _features.text.split(","),
       "mentor": selectedTrainer ?? "No Trainer Assigned",
       "isPurchased": false,
+      "date": selectedDate ?? "",
+
     });
 
     _imageUrl.clear();
@@ -185,6 +189,38 @@ class _MembershipCarouselManagerState
           _field(_features, "Features (comma separated)"),
 
           SizedBox(height: 10),
+          Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
+InkWell(
+  onTap: () async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        selectedDate =
+            "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+      });
+    }
+  },
+  child: Container(
+    width: double.infinity,
+    padding: EdgeInsets.all(12),
+    margin: EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(
+      selectedDate ?? "Choose Date",
+      style: TextStyle(fontSize: 16),
+    ),
+  ),
+),
+
 
           // TRAINER DROPDOWN
           Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -256,6 +292,8 @@ class _FitnessMembershipCardManagerState
 
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
+  String? selectedDate;
+
 
   @override
   void initState() {
@@ -279,6 +317,8 @@ class _FitnessMembershipCardManagerState
       "description": _description.text.trim(),
       "duration": _duration.text.trim(),
       "mentor": selectedTrainer ?? "No Trainer Assigned",
+      "date": selectedDate ?? "",
+
     });
 
     // CLEAR FIELDS
@@ -372,6 +412,38 @@ return ListTile(
           _field(_duration, "Duration"),
 
           SizedBox(height: 10),
+          Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
+InkWell(
+  onTap: () async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        selectedDate =
+            "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+      });
+    }
+  },
+  child: Container(
+    width: double.infinity,
+    padding: EdgeInsets.all(12),
+    margin: EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(
+      selectedDate ?? "Choose Date",
+      style: TextStyle(fontSize: 16),
+    ),
+  ),
+),
+
 
           // TRAINER DROPDOWN
           Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),

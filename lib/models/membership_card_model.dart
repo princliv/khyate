@@ -8,7 +8,8 @@ class MembershipCardData {
   final String time;
   final String mentor;
   final String reviews;
-  final bool isPurchased;  // <--- NEW FIELD
+  final bool isPurchased;
+  final String date;   // <-- NEW FIELD
 
   MembershipCardData({
     required this.id,
@@ -21,6 +22,7 @@ class MembershipCardData {
     required this.mentor,
     required this.reviews,
     required this.isPurchased,
+    required this.date,   // <-- NEW FIELD
   });
 
   factory MembershipCardData.fromFirestore(Map<String, dynamic> data, String id) {
@@ -35,6 +37,7 @@ class MembershipCardData {
       mentor: data["mentor"] ?? "",
       reviews: data["reviews"] ?? "",
       isPurchased: data["isPurchased"] ?? false,
+      date: data["date"] ?? "",   // <-- NEW
     );
   }
 
@@ -49,6 +52,7 @@ class MembershipCardData {
       "mentor": mentor,
       "reviews": reviews,
       "isPurchased": isPurchased,
+      "date": date,  // <-- NEW
     };
   }
 }

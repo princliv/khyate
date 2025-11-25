@@ -8,7 +8,8 @@ class MembershipCarouselData {
   final String title;
   final String price;
   final List<String> features;
-  final String mentor;   // <-- NEW FIELD
+  final String mentor;
+  final String date;    // <-- NEW FIELD
 
   MembershipCarouselData({
     required this.id,
@@ -20,25 +21,25 @@ class MembershipCarouselData {
     required this.title,
     required this.price,
     required this.features,
-    required this.mentor,   // <-- REQUIRED NOW
+    required this.mentor,
+    required this.date,       // <-- NEW
   });
 
-factory MembershipCarouselData.fromFirestore(
-    Map<String, dynamic> json, String id) {
-  return MembershipCarouselData(
-    id: id,
-    imageUrl: json["imageUrl"] ?? "",
-    tag: json["tag"] ?? "",
-    isPurchased: json["isPurchased"] ?? false,
-    classes: json["classes"] ?? "",
-    type: json["type"] ?? "",
-    title: json["title"] ?? "",
-    price: json["price"] ?? "",
-    features: List<String>.from(json["features"] ?? []),
-    mentor: json.containsKey("mentor") ? json["mentor"] ?? "" : "",
-  );
-}
-
+  factory MembershipCarouselData.fromFirestore(Map<String, dynamic> json, String id) {
+    return MembershipCarouselData(
+      id: id,
+      imageUrl: json["imageUrl"] ?? "",
+      tag: json["tag"] ?? "",
+      isPurchased: json["isPurchased"] ?? false,
+      classes: json["classes"] ?? "",
+      type: json["type"] ?? "",
+      title: json["title"] ?? "",
+      price: json["price"] ?? "",
+      features: List<String>.from(json["features"] ?? []),
+      mentor: json["mentor"] ?? "",
+      date: json["date"] ?? "",   // <-- NEW
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -50,7 +51,8 @@ factory MembershipCarouselData.fromFirestore(
       "title": title,
       "price": price,
       "features": features,
-      "mentor": mentor,   // <-- SAVE NEW FIELD
+      "mentor": mentor,
+      "date": date,  // <-- NEW
     };
   }
 }

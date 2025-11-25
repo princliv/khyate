@@ -8,7 +8,8 @@ class WellnessCard {
   final String duration;
   final String mentor;
   final String price;
-  final bool isPurchased;  // <-- ADD THIS
+  final String date;       // <-- NEW
+  final bool isPurchased;
 
   WellnessCard({
     required this.id,
@@ -20,7 +21,8 @@ class WellnessCard {
     required this.duration,
     required this.mentor,
     required this.price,
-    required this.isPurchased,  // <-- ADD THIS
+    required this.date,     // <-- NEW
+    required this.isPurchased,
   });
 
   factory WellnessCard.fromMap(String id, Map<String, dynamic> data) {
@@ -34,7 +36,8 @@ class WellnessCard {
       duration: data['duration'] ?? '',
       mentor: data['mentor'] ?? '',
       price: data['price'] ?? '',
-      isPurchased: data['isPurchased'] ?? false, // default false
+      date: data['date'] ?? '',        // <-- NEW
+      isPurchased: data['isPurchased'] ?? false,
     );
   }
 
@@ -48,6 +51,7 @@ class WellnessCard {
       "duration": duration,
       "mentor": mentor,
       "price": price,
+      "date": date,                    // <-- NEW
       "isPurchased": isPurchased,
     };
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:khyate_b2b/models/cart_model.dart';
 import 'package:khyate_b2b/providers/cart_provider.dart';
 import 'package:khyate_b2b/services/purchase_status_service.dart';
+import 'package:khyate_b2b/widgets/review_widget.dart';
 import 'package:provider/provider.dart';
 import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/fitness_session_modal.dart';
@@ -251,14 +252,30 @@ StreamBuilder<QuerySnapshot>(
               const SizedBox(height: 10),
 
               // DETAILS ROW
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("🕒 ${d['duration']}", style: TextStyle(color: subTextColor)),
-                  Text("👤 ${d['mentor']}", style: TextStyle(color: subTextColor)),
-                  Text("₹ ${d['price']}", style: TextStyle(color: headlineColor)),
-                ],
-              ),
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    Text("🕒 ${d['duration']}",
+        style: TextStyle(color: subTextColor)
+    ),
+
+    Text("📅 ${d.data().toString().contains('date') ? d['date'] : 'No Date'}",
+  style: TextStyle(color: subTextColor),
+),
+
+
+    Text("👤 ${d['mentor']}",
+        style: TextStyle(color: subTextColor)
+    ),
+
+    Text("₹ ${d['price']}",
+        style: TextStyle(color: headlineColor)
+    ),
+  ],
+),
+
+
+
 
               const SizedBox(height: 10),
 
@@ -282,15 +299,23 @@ FutureBuilder<bool>(
     final purchased = snapshot.data!;
 
     if (purchased) {
-      return Container(
-        height: 45,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.grey,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text("Purchased", style: TextStyle(color: Colors.white)),
-      );
+      return Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Container(
+      height: 45,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.grey,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text("Purchased", style: TextStyle(color: Colors.white)),
+    ),
+    const SizedBox(height: 10),
+    ReviewWidget(cardId: d.id),
+  ],
+);
+
     }
 
     return ElevatedButton(

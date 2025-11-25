@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:khyate_b2b/models/cart_model.dart';
 import 'package:khyate_b2b/providers/cart_provider.dart';
 import 'package:khyate_b2b/services/purchase_status_service.dart';
+import 'package:khyate_b2b/widgets/review_widget.dart';
 import 'package:provider/provider.dart';
 import '../models/membership_card_model.dart';   // <-- USE MODEL FROM MODELS FOLDER
 
@@ -93,26 +94,44 @@ class MembershipCard extends StatelessWidget {
                   ),
                   SizedBox(height: 12),
                   Row(
-                    children: [
-                      Icon(Icons.access_time, color: Color(0xFFDF50B7), size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        data.time,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        data.mentor,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+  children: [
+    /// TIME
+    Icon(Icons.access_time, color: Color(0xFFDF50B7), size: 16),
+    SizedBox(width: 4),
+    Text(
+      data.time,        // TIME stays here
+      style: TextStyle(
+        color: Colors.black54,
+        fontSize: 13,
+      ),
+    ),
+
+    SizedBox(width: 12),
+
+    /// DATE (NEW)
+    Icon(Icons.calendar_today, color: Color(0xFFDF50B7), size: 16),
+    SizedBox(width: 4),
+    Text(
+      data.date,        // ADD THIS FIELD
+      style: TextStyle(
+        color: Colors.black54,
+        fontSize: 13,
+      ),
+    ),
+
+    SizedBox(width: 12),
+
+    /// TRAINER (MENTOR)
+    Text(
+      data.mentor,
+      style: TextStyle(
+        color: Colors.black54,
+        fontSize: 13,
+      ),
+    ),
+  ],
+),
+
                   SizedBox(height: 8),
                   Row(
                     children: [
@@ -141,15 +160,22 @@ FutureBuilder<bool>(
     final purchased = snapshot.data!;
 
     if (purchased) {
-      return Container(
-        height: 45,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.grey,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text("Purchased", style: TextStyle(color: Colors.white)),
-      );
+     return Column(
+  children: [
+    Container(
+      height: 45,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.grey,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text("Purchased", style: TextStyle(color: Colors.white)),
+    ),
+    const SizedBox(height: 10),
+    ReviewWidget(cardId: data.id),
+  ],
+);
+
     }
 
     return ElevatedButton(
