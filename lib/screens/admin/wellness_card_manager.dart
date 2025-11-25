@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:khyate_b2b/screens/purchase_list_screen.dart';
 
 class WellnessCardManager extends StatefulWidget {
   @override
@@ -14,6 +15,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
   final _category = TextEditingController();
   final _duration = TextEditingController();
   final _price = TextEditingController();
+  final _date = TextEditingController();
 
   String? selectedTrainer;  
   List<DocumentSnapshot> trainers = [];
@@ -22,12 +24,27 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
   void initState() {
     super.initState();
 
-    // FETCH TRAINERS FROM FIRESTORE
     FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
       setState(() {
         trainers = snap.docs;
       });
     });
+  }
+
+  // ⭐⭐⭐ DATE PICKER FUNCTION
+  Future<void> _pickDate() async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _date.text = "${picked.day}-${picked.month}-${picked.year}";
+      });
+    }
   }
 
   void _addWellnessCard() {
@@ -40,6 +57,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
       "duration": _duration.text.trim(),
       "mentor": selectedTrainer ?? "No Trainer Assigned",
       "price": _price.text.trim(),
+      "date": _date.text.trim(), 
     });
 
     _imageUrl.clear();
@@ -49,8 +67,9 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
     _category.clear();
     _duration.clear();
     _price.clear();
-    selectedTrainer = null;
+    _date.clear();
 
+    selectedTrainer = null;
     setState(() {});
   }
 
@@ -65,9 +84,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
         _inputForm(),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("wellnesscards")
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection("wellnesscards").snapshots(),
             builder: (context, snap) {
               if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
@@ -81,9 +98,28 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                   return ListTile(
                     title: Text(d['title']),
                     subtitle: Text("${d['category']} • ${d['duration']} • 👤 ${d['mentor']}"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.people, color: Colors.blue),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PurchaseListScreen(
+                                  cardId: d.id,
+                                  cardTitle: d["title"],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _delete(d.id),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -109,10 +145,24 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
           _field(_duration, "Duration"),
           _field(_price, "Price"),
 
+          // ⭐⭐⭐ REPLACED DATE FIELD WITH DATE PICKER
+          GestureDetector(
+            onTap: _pickDate,
+            child: AbsorbPointer(
+              child: TextField(
+                controller: _date,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: "Date",
+                  suffixIcon: Icon(Icons.calendar_month),
+                ),
+              ),
+            ),
+          ),
+
           SizedBox(height: 10),
 
           Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
-
           Container(
             margin: EdgeInsets.only(bottom: 8),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),

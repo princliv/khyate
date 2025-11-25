@@ -2,6 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
 import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
+import 'package:khyate_b2b/screens/purchase_list_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -64,10 +68,14 @@ class _MembershipCarouselManagerState
   final _title = TextEditingController();
   final _price = TextEditingController();
   final _features = TextEditingController();
+  final _location = TextEditingController();
+
 
   // TRAINER DROPDOWN VARIABLES
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
+  String? selectedDate;
+
 
   @override
   void initState() {
@@ -82,17 +90,20 @@ class _MembershipCarouselManagerState
   }
 
   void _addMembership() {
-    FirebaseFirestore.instance.collection("memberships").add({
-      "imageUrl": _imageUrl.text,
-      "tag": _tag.text,
-      "classes": _classes.text,
-      "type": _type.text,
-      "title": _title.text,
-      "price": _price.text,
-      "features": _features.text.split(","),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-      "isPurchased": false,
-    });
+FirebaseFirestore.instance.collection("memberships").add({
+  "imageUrl": _imageUrl.text,
+  "tag": _tag.text,
+  "classes": _classes.text,
+  "type": _type.text,
+  "title": _title.text,
+  "price": _price.text,
+  "features": _features.text.split(","),
+  "mentor": selectedTrainer ?? "No Trainer Assigned",
+  "isPurchased": false,
+  "date": selectedDate ?? "",
+  "location": _location.text.trim(),  // <-- NEW
+});
+
 
     _imageUrl.clear();
     _tag.clear();
@@ -132,13 +143,34 @@ class _MembershipCarouselManagerState
                 itemBuilder: (context, i) {
                   final d = docs[i];
                   return ListTile(
-                    title: Text(d['title']),
-                    subtitle: Text("Type: ${d['type']}  | Trainer: ${d['mentor']}"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
-                    ),
-                  );
+  title: Text(d['title']),
+  subtitle: Text("Type: ${d['type']} | Trainer: ${d['mentor']}"),
+  trailing: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      IconButton(
+        icon: Icon(Icons.people, color: Colors.blue),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PurchaseListScreen(
+                cardId: d.id,
+                cardTitle: d["title"],
+              ),
+            ),
+          );
+        },
+      ),
+
+      IconButton(
+        icon: Icon(Icons.delete, color: Colors.red),
+        onPressed: () => _delete(d.id),
+      ),
+    ],
+  ),
+);
+
                 },
               );
             },
@@ -161,8 +193,42 @@ class _MembershipCarouselManagerState
           _field(_title, "Title"),
           _field(_price, "Price"),
           _field(_features, "Features (comma separated)"),
+          _field(_location, "Location (Optional)"),
+
 
           SizedBox(height: 10),
+          Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
+InkWell(
+  onTap: () async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        selectedDate =
+            "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+      });
+    }
+  },
+  child: Container(
+    width: double.infinity,
+    padding: EdgeInsets.all(12),
+    margin: EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(
+      selectedDate ?? "Choose Date",
+      style: TextStyle(fontSize: 16),
+    ),
+  ),
+),
+
 
           // TRAINER DROPDOWN
           Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -231,9 +297,13 @@ class _FitnessMembershipCardManagerState
   final _subtitle = TextEditingController();
   final _description = TextEditingController();
   final _duration = TextEditingController();
+  final _location = TextEditingController();
+
 
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
+  String? selectedDate;
+
 
   @override
   void initState() {
@@ -248,16 +318,19 @@ class _FitnessMembershipCardManagerState
   }
 
   void _addCard() {
-    FirebaseFirestore.instance.collection("membershipcards").add({
-      "imageUrl": _imageUrl.text.trim(),
-      "category": _category.text.trim(),
-      "price": _price.text.trim(),
-      "title": _title.text.trim(),
-      "subtitle": _subtitle.text.trim(),
-      "description": _description.text.trim(),
-      "duration": _duration.text.trim(),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-    });
+FirebaseFirestore.instance.collection("membershipcards").add({
+  "imageUrl": _imageUrl.text.trim(),
+  "category": _category.text.trim(),
+  "price": _price.text.trim(),
+  "title": _title.text.trim(),
+  "subtitle": _subtitle.text.trim(),
+  "description": _description.text.trim(),
+  "duration": _duration.text.trim(),
+  "mentor": selectedTrainer ?? "No Trainer Assigned",
+  "date": selectedDate ?? "",
+  "location": _location.text.trim(),  // <-- NEW
+});
+
 
     // CLEAR FIELDS
     _imageUrl.clear();
@@ -281,6 +354,26 @@ class _FitnessMembershipCardManagerState
     return Column(
       children: [
         _inputForm(),
+        ElevatedButton(
+  onPressed: () async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude);
+      String address =
+          "${placemarks.first.locality}, ${placemarks.first.country}";
+      setState(() {
+        _location.text = address;
+      });
+    } catch (e) {
+      print("Error fetching location: $e");
+    }
+  },
+  child: Text("Use Current Location"),
+),
+
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
@@ -297,14 +390,35 @@ class _FitnessMembershipCardManagerState
                 itemCount: docs.length,
                 itemBuilder: (context, i) {
                   final d = docs[i];
-                  return ListTile(
-                    title: Text(d['title']),
-                    subtitle: Text("Category: ${d['category']}"),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
-                    ),
-                  );
+return ListTile(
+  title: Text(d['title']),
+  subtitle: Text("Category: ${d['category']} | Trainer: ${d['mentor']}"),
+  trailing: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      IconButton(
+        icon: Icon(Icons.people, color: Colors.blue),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PurchaseListScreen(
+                cardId: d.id,
+                cardTitle: d["title"],
+              ),
+            ),
+          );
+        },
+      ),
+      IconButton(
+        icon: Icon(Icons.delete, color: Colors.red),
+        onPressed: () => _delete(d.id),
+      ),
+    ],
+  ),
+);
+
+
                 },
               );
             },
@@ -327,8 +441,42 @@ class _FitnessMembershipCardManagerState
           _field(_subtitle, "Subtitle"),
           _field(_description, "Description"),
           _field(_duration, "Duration"),
+          _field(_location, "Location (Optional)"),
+
 
           SizedBox(height: 10),
+          Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
+InkWell(
+  onTap: () async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        selectedDate =
+            "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+      });
+    }
+  },
+  child: Container(
+    width: double.infinity,
+    padding: EdgeInsets.all(12),
+    margin: EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(
+      selectedDate ?? "Choose Date",
+      style: TextStyle(fontSize: 16),
+    ),
+  ),
+),
+
 
           // TRAINER DROPDOWN
           Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),

@@ -8,23 +8,27 @@ class MembershipCarouselData {
   final String title;
   final String price;
   final List<String> features;
-  final String mentor;   // <-- NEW FIELD
+  final String mentor;
+  final String date;    // <-- NEW FIELD
+  final String location; // <-- NEW FIELD
 
-  MembershipCarouselData({
-    required this.id,
-    required this.imageUrl,
-    required this.tag,
-    required this.isPurchased,
-    required this.classes,
-    required this.type,
-    required this.title,
-    required this.price,
-    required this.features,
-    required this.mentor,   // <-- REQUIRED NOW
-  });
 
-factory MembershipCarouselData.fromFirestore(
-    Map<String, dynamic> json, String id) {
+MembershipCarouselData({
+  required this.id,
+  required this.imageUrl,
+  required this.tag,
+  required this.isPurchased,
+  required this.classes,
+  required this.type,
+  required this.title,
+  required this.price,
+  required this.features,
+  required this.mentor,
+  required this.date,
+  required this.location,   // <-- NEW
+});
+
+factory MembershipCarouselData.fromFirestore(Map<String, dynamic> json, String id) {
   return MembershipCarouselData(
     id: id,
     imageUrl: json["imageUrl"] ?? "",
@@ -35,22 +39,26 @@ factory MembershipCarouselData.fromFirestore(
     title: json["title"] ?? "",
     price: json["price"] ?? "",
     features: List<String>.from(json["features"] ?? []),
-    mentor: json.containsKey("mentor") ? json["mentor"] ?? "" : "",
+    mentor: json["mentor"] ?? "",
+    date: json["date"] ?? "",
+    location: json["location"] ?? "",  // <-- NEW
   );
 }
 
+Map<String, dynamic> toMap() {
+  return {
+    "imageUrl": imageUrl,
+    "tag": tag,
+    "isPurchased": isPurchased,
+    "classes": classes,
+    "type": type,
+    "title": title,
+    "price": price,
+    "features": features,
+    "mentor": mentor,
+    "date": date,
+    "location": location,   // <-- NEW
+  };
+}
 
-  Map<String, dynamic> toMap() {
-    return {
-      "imageUrl": imageUrl,
-      "tag": tag,
-      "isPurchased": isPurchased,
-      "classes": classes,
-      "type": type,
-      "title": title,
-      "price": price,
-      "features": features,
-      "mentor": mentor,   // <-- SAVE NEW FIELD
-    };
-  }
 }

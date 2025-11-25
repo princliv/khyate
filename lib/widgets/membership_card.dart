@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:khyate_b2b/models/cart_model.dart';
 import 'package:khyate_b2b/providers/cart_provider.dart';
+import 'package:khyate_b2b/services/purchase_status_service.dart';
+import 'package:khyate_b2b/widgets/review_widget.dart';
 import 'package:provider/provider.dart';
 import '../models/membership_card_model.dart';   // <-- USE MODEL FROM MODELS FOLDER
 
@@ -46,6 +48,7 @@ class MembershipCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // CATEGORY + PRICE ROW
                   Row(
                     children: [
                       Container(
@@ -75,6 +78,8 @@ class MembershipCard extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 8),
+
+                  // TITLE
                   Text(
                     data.title,
                     style: TextStyle(
@@ -83,6 +88,8 @@ class MembershipCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 6),
+
+                  // DESCRIPTION
                   Text(
                     data.description,
                     style: TextStyle(
@@ -91,65 +98,116 @@ class MembershipCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 12),
+
+                  // TIME + DATE ROW
                   Row(
                     children: [
                       Icon(Icons.access_time, color: Color(0xFFDF50B7), size: 16),
                       SizedBox(width: 4),
                       Text(
                         data.time,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
+                      ),
+                      SizedBox(width: 12),
+                      Icon(Icons.calendar_today, color: Color(0xFFDF50B7), size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        data.date,
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+
+                  // LOCATION + TRAINER ROW
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, color: Color(0xFFDF50B7), size: 16),
+                      SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          data.location,
+                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: 8),
+                      SizedBox(width: 12),
                       Text(
                         data.mentor,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
                       ),
                     ],
                   ),
                   SizedBox(height: 8),
+
+                  // REVIEWS
                   Row(
                     children: [
                       Icon(Icons.star_border, color: Colors.black38, size: 16),
                       Text(
                         data.reviews,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
                       ),
                     ],
                   ),
                   SizedBox(height: 12),
 
-ElevatedButton(
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.pinkAccent,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  ),
-  onPressed: () {
-    Provider.of<CartProvider>(context, listen: false).addItem(
-      CartItem(
-        id: data.id,
-        title: data.title,
-        imageUrl: data.imageUrl,
-        price: int.parse(data.price),
-        type: "membership",
-      ),
-    );
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("${data.title} added to cart"))
-    );
-  },
-  child: Text("Add to Cart"),
-),
+                  // ADD TO CART / PURCHASED BUTTON
+                  FutureBuilder<bool>(
+                    future: PurchaseStatusService.isPurchased(data.id),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return SizedBox(
+                          height: 45,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
 
+                      final purchased = snapshot.data!;
+
+                      if (purchased) {
+                        return Column(
+                          children: [
+                            Container(
+                              height: 45,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.grey,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text("Purchased", style: TextStyle(color: Colors.white)),
+                            ),
+                            const SizedBox(height: 10),
+                            ReviewWidget(cardId: data.id),
+                          ],
+                        );
+                      }
+
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.pinkAccent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Provider.of<CartProvider>(context, listen: false).addItem(
+                            CartItem(
+                              id: data.id,
+                              title: data.title,
+                              imageUrl: data.imageUrl,
+                              price: int.parse(data.price),
+                              type: "membership",
+                            ),
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("${data.title} added to cart")),
+                          );
+                        },
+                        child: Text("Add to Cart"),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
