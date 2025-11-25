@@ -70,18 +70,13 @@ class _MembershipCarouselManagerState
   final _features = TextEditingController();
   final _location = TextEditingController();
 
-
-  // TRAINER DROPDOWN VARIABLES
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
   String? selectedDate;
 
-
   @override
   void initState() {
     super.initState();
-
-    // Fetch trainer list from Firestore
     FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
       setState(() {
         trainers = snap.docs;
@@ -90,20 +85,19 @@ class _MembershipCarouselManagerState
   }
 
   void _addMembership() {
-FirebaseFirestore.instance.collection("memberships").add({
-  "imageUrl": _imageUrl.text,
-  "tag": _tag.text,
-  "classes": _classes.text,
-  "type": _type.text,
-  "title": _title.text,
-  "price": _price.text,
-  "features": _features.text.split(","),
-  "mentor": selectedTrainer ?? "No Trainer Assigned",
-  "isPurchased": false,
-  "date": selectedDate ?? "",
-  "location": _location.text.trim(),  // <-- NEW
-});
-
+    FirebaseFirestore.instance.collection("memberships").add({
+      "imageUrl": _imageUrl.text,
+      "tag": _tag.text,
+      "classes": _classes.text,
+      "type": _type.text,
+      "title": _title.text,
+      "price": _price.text,
+      "features": _features.text.split(","),
+      "mentor": selectedTrainer ?? "No Trainer Assigned",
+      "isPurchased": false,
+      "date": selectedDate ?? "",
+      "location": _location.text.trim(),
+    });
 
     _imageUrl.clear();
     _tag.clear();
@@ -113,8 +107,6 @@ FirebaseFirestore.instance.collection("memberships").add({
     _price.clear();
     _features.clear();
     selectedTrainer = null;
-
-    setState(() {});
   }
 
   void _delete(String id) {
@@ -123,149 +115,132 @@ FirebaseFirestore.instance.collection("memberships").add({
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _inputForm(),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("memberships")
-                .snapshots(),
-            builder: (context, snap) {
-              if (!snap.hasData) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              final docs = snap.data!.docs;
-
-              return ListView.builder(
-                itemCount: docs.length,
-                itemBuilder: (context, i) {
-                  final d = docs[i];
-                  return ListTile(
-  title: Text(d['title']),
-  subtitle: Text("Type: ${d['type']} | Trainer: ${d['mentor']}"),
-  trailing: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      IconButton(
-        icon: Icon(Icons.people, color: Colors.blue),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PurchaseListScreen(
-                cardId: d.id,
-                cardTitle: d["title"],
-              ),
-            ),
-          );
-        },
-      ),
-
-      IconButton(
-        icon: Icon(Icons.delete, color: Colors.red),
-        onPressed: () => _delete(d.id),
-      ),
-    ],
-  ),
-);
-
-                },
-              );
-            },
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _inputForm() {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _field(_imageUrl, "Image URL"),
-          _field(_tag, "Tag"),
-          _field(_classes, "Classes"),
-          _field(_type, "Type"),
-          _field(_title, "Title"),
-          _field(_price, "Price"),
-          _field(_features, "Features (comma separated)"),
-          _field(_location, "Location (Optional)"),
+          _inputForm(),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection("memberships").snapshots(),
+              builder: (context, snap) {
+                if (!snap.hasData) return Center(child: CircularProgressIndicator());
+                final docs = snap.data!.docs;
 
-
-          SizedBox(height: 10),
-          Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
-InkWell(
-  onTap: () async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, i) {
+                    final d = docs[i];
+                    return ListTile(
+                      title: Text(d['title']),
+                      subtitle: Text("Type: ${d['type']} | Trainer: ${d['mentor']}"),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.people, color: Colors.blue),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PurchaseListScreen(
+                                    cardId: d.id,
+                                    cardTitle: d["title"],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _delete(d.id),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
+  }
 
-    if (pickedDate != null) {
-      setState(() {
-        selectedDate =
-            "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
-      });
-    }
-  },
-  child: Container(
-    width: double.infinity,
-    padding: EdgeInsets.all(12),
-    margin: EdgeInsets.only(bottom: 8),
-    decoration: BoxDecoration(
-      border: Border.all(color: Colors.grey),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Text(
-      selectedDate ?? "Choose Date",
-      style: TextStyle(fontSize: 16),
-    ),
-  ),
-),
-
-
-          // TRAINER DROPDOWN
-          Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
-          Container(
+  Widget _inputForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _field(_imageUrl, "Image URL"),
+        _field(_tag, "Tag"),
+        _field(_classes, "Classes"),
+        _field(_type, "Type"),
+        _field(_title, "Title"),
+        _field(_price, "Price"),
+        _field(_features, "Features (comma separated)"),
+        _field(_location, "Location (Optional)"),
+        SizedBox(height: 10),
+        Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
+        InkWell(
+          onTap: () async {
+            DateTime? pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2100),
+            );
+            if (pickedDate != null) {
+              setState(() {
+                selectedDate = "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+              });
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12),
             margin: EdgeInsets.only(bottom: 8),
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: DropdownButton<String>(
-              hint: Text("Choose Trainer"),
-              value: selectedTrainer,
-              isExpanded: true,
-              underline: SizedBox(),
-              items: trainers.map((t) {
-                return DropdownMenuItem<String>(
-                  value: t["name"],
-                  child: Text(t["name"]),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedTrainer = value;
-                });
-              },
-            ),
+            child: Text(selectedDate ?? "Choose Date", style: TextStyle(fontSize: 16)),
           ),
-
-          SizedBox(height: 10),
-
-          ElevatedButton(
-            onPressed: _addMembership,
-            child: Text("Add Membership Carousel Card"),
-          )
-        ],
-      ),
+        ),
+        Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
+        Container(
+          margin: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: DropdownButton<String>(
+            hint: Text("Choose Trainer"),
+            value: selectedTrainer,
+            isExpanded: true,
+            underline: SizedBox(),
+            items: trainers.map((t) {
+              return DropdownMenuItem<String>(
+                value: t["name"],
+                child: Text(t["name"]),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                selectedTrainer = value;
+              });
+            },
+          ),
+        ),
+        SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: _addMembership,
+          child: Text("Add Membership Carousel Card"),
+        ),
+      ],
     );
   }
 
@@ -282,6 +257,7 @@ InkWell(
     );
   }
 }
+
 class FitnessMembershipCardManager extends StatefulWidget {
   @override
   State<FitnessMembershipCardManager> createState() =>
@@ -299,17 +275,13 @@ class _FitnessMembershipCardManagerState
   final _duration = TextEditingController();
   final _location = TextEditingController();
 
-
   String? selectedTrainer;
   List<DocumentSnapshot> trainers = [];
   String? selectedDate;
 
-
   @override
   void initState() {
     super.initState();
-
-    // FETCH TRAINERS FROM FIRESTORE
     FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
       setState(() {
         trainers = snap.docs;
@@ -318,21 +290,19 @@ class _FitnessMembershipCardManagerState
   }
 
   void _addCard() {
-FirebaseFirestore.instance.collection("membershipcards").add({
-  "imageUrl": _imageUrl.text.trim(),
-  "category": _category.text.trim(),
-  "price": _price.text.trim(),
-  "title": _title.text.trim(),
-  "subtitle": _subtitle.text.trim(),
-  "description": _description.text.trim(),
-  "duration": _duration.text.trim(),
-  "mentor": selectedTrainer ?? "No Trainer Assigned",
-  "date": selectedDate ?? "",
-  "location": _location.text.trim(),  // <-- NEW
-});
+    FirebaseFirestore.instance.collection("membershipcards").add({
+      "imageUrl": _imageUrl.text.trim(),
+      "category": _category.text.trim(),
+      "price": _price.text.trim(),
+      "title": _title.text.trim(),
+      "subtitle": _subtitle.text.trim(),
+      "description": _description.text.trim(),
+      "duration": _duration.text.trim(),
+      "mentor": selectedTrainer ?? "No Trainer Assigned",
+      "date": selectedDate ?? "",
+      "location": _location.text.trim(),
+    });
 
-
-    // CLEAR FIELDS
     _imageUrl.clear();
     _category.clear();
     _price.clear();
@@ -341,8 +311,6 @@ FirebaseFirestore.instance.collection("membershipcards").add({
     _description.clear();
     _duration.clear();
     selectedTrainer = null;
-
-    setState(() {});
   }
 
   void _delete(String id) {
@@ -351,169 +319,132 @@ FirebaseFirestore.instance.collection("membershipcards").add({
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _inputForm(),
-        ElevatedButton(
-  onPressed: () async {
-    try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude, position.longitude);
-      String address =
-          "${placemarks.first.locality}, ${placemarks.first.country}";
-      setState(() {
-        _location.text = address;
-      });
-    } catch (e) {
-      print("Error fetching location: $e");
-    }
-  },
-  child: Text("Use Current Location"),
-),
-
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("membershipcards")
-                .snapshots(),
-            builder: (context, snap) {
-              if (!snap.hasData) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              final docs = snap.data!.docs;
-
-              return ListView.builder(
-                itemCount: docs.length,
-                itemBuilder: (context, i) {
-                  final d = docs[i];
-return ListTile(
-  title: Text(d['title']),
-  subtitle: Text("Category: ${d['category']} | Trainer: ${d['mentor']}"),
-  trailing: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      IconButton(
-        icon: Icon(Icons.people, color: Colors.blue),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PurchaseListScreen(
-                cardId: d.id,
-                cardTitle: d["title"],
-              ),
-            ),
-          );
-        },
-      ),
-      IconButton(
-        icon: Icon(Icons.delete, color: Colors.red),
-        onPressed: () => _delete(d.id),
-      ),
-    ],
-  ),
-);
-
-
-                },
-              );
-            },
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _inputForm() {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _field(_imageUrl, "Image URL"),
-          _field(_category, "Category"),
-          _field(_price, "Price"),
-          _field(_title, "Title"),
-          _field(_subtitle, "Subtitle"),
-          _field(_description, "Description"),
-          _field(_duration, "Duration"),
-          _field(_location, "Location (Optional)"),
+          _inputForm(),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection("membershipcards").snapshots(),
+              builder: (context, snap) {
+                if (!snap.hasData) return Center(child: CircularProgressIndicator());
+                final docs = snap.data!.docs;
 
-
-          SizedBox(height: 10),
-          Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
-InkWell(
-  onTap: () async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, i) {
+                    final d = docs[i];
+                    return ListTile(
+                      title: Text(d['title']),
+                      subtitle: Text("Category: ${d['category']} | Trainer: ${d['mentor']}"),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.people, color: Colors.blue),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PurchaseListScreen(
+                                    cardId: d.id,
+                                    cardTitle: d["title"],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _delete(d.id),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
+  }
 
-    if (pickedDate != null) {
-      setState(() {
-        selectedDate =
-            "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
-      });
-    }
-  },
-  child: Container(
-    width: double.infinity,
-    padding: EdgeInsets.all(12),
-    margin: EdgeInsets.only(bottom: 8),
-    decoration: BoxDecoration(
-      border: Border.all(color: Colors.grey),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Text(
-      selectedDate ?? "Choose Date",
-      style: TextStyle(fontSize: 16),
-    ),
-  ),
-),
-
-
-          // TRAINER DROPDOWN
-          Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
-          Container(
+  Widget _inputForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _field(_imageUrl, "Image URL"),
+        _field(_category, "Category"),
+        _field(_price, "Price"),
+        _field(_title, "Title"),
+        _field(_subtitle, "Subtitle"),
+        _field(_description, "Description"),
+        _field(_duration, "Duration"),
+        _field(_location, "Location (Optional)"),
+        SizedBox(height: 10),
+        Text("Select Date", style: TextStyle(fontWeight: FontWeight.bold)),
+        InkWell(
+          onTap: () async {
+            DateTime? pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2100),
+            );
+            if (pickedDate != null) {
+              setState(() {
+                selectedDate = "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+              });
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12),
             margin: EdgeInsets.only(bottom: 8),
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: DropdownButton<String>(
-              hint: Text("Choose Trainer"),
-              value: selectedTrainer,
-              isExpanded: true,
-              underline: SizedBox(),
-              items: trainers.map((t) {
-                return DropdownMenuItem<String>(
-                  value: t["name"],
-                  child: Text(t["name"]),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedTrainer = value;
-                });
-              },
-            ),
+            child: Text(selectedDate ?? "Choose Date", style: TextStyle(fontSize: 16)),
           ),
-
-          SizedBox(height: 10),
-
-          ElevatedButton(
-            onPressed: _addCard,
-            child: Text("Add Fitness Card"),
-          )
-        ],
-      ),
+        ),
+        Text("Select Trainer", style: TextStyle(fontWeight: FontWeight.bold)),
+        Container(
+          margin: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: DropdownButton<String>(
+            hint: Text("Choose Trainer"),
+            value: selectedTrainer,
+            isExpanded: true,
+            underline: SizedBox(),
+            items: trainers.map((t) {
+              return DropdownMenuItem<String>(
+                value: t["name"],
+                child: Text(t["name"]),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                selectedTrainer = value;
+              });
+            },
+          ),
+        ),
+        SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: _addCard,
+          child: Text("Add Fitness Card"),
+        ),
+      ],
     );
   }
 

@@ -259,7 +259,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
 
             /// FILTERED TOP MEMBERSHIP CARDS
             SizedBox(
-              height: 600,
+              height: 700,
               child: StreamBuilder<List<MembershipCardData>>(
                 stream: getMembershipsStream(),
                 builder: (context, snapshot) {
