@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';   // ✅ IMPORTANT
 import 'package:khyate_b2b/screens/onboarding_screen.dart';
 import 'package:khyate_b2b/providers/cart_provider.dart';    // ✅ YOUR CART PROVIDER
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ void main() async {
     await Firebase.initializeApp();
   }
 
+  await NotificationService.initialize();
   runApp(const MyApp());
 }
 

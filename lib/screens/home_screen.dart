@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:khyate_b2b/screens/cart_screen.dart';
 import 'package:khyate_b2b/screens/fitness_screen.dart';
 import 'package:khyate_b2b/screens/wellness_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/hero_section.dart';
@@ -17,6 +19,7 @@ class HomeScreen extends StatelessWidget {
 
   Future<void> _handleLogout(BuildContext context) async {
     await AuthService().signOut();
+    context.read<CartProvider>().clearCart();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),

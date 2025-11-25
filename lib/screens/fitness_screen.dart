@@ -6,6 +6,7 @@ import '../widgets/todays_classes_component.dart';
 import '../widgets/membership_card.dart';
 import '../widgets/fitness_session_modal.dart';
 import '../models/membership_card_model.dart';
+import '../services/notification_service.dart';
 
 class FitnessScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -258,32 +259,35 @@ class _FitnessScreenState extends State<FitnessScreen> {
             ),
 
             /// FILTERED TOP MEMBERSHIP CARDS
-            SizedBox(
-              height: 700,
-              child: StreamBuilder<List<MembershipCardData>>(
-                stream: getMembershipsStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text("No memberships available"));
-                  }
+            StreamBuilder<List<MembershipCardData>>(
+              stream: getMembershipsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text("No memberships available"));
+                }
 
-                  final memberships = filterMemberships(snapshot.data!);
+                final allMemberships = snapshot.data!;
+                NotificationService.scheduleUpcomingSessions(allMemberships);
+                final memberships = filterMemberships(allMemberships);
 
-                  return ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: memberships.length,
-                    itemBuilder: (context, index) {
-                      return MembershipCard(
-                        data: memberships[index],
-                        onTap: () {},
-                      );
-                    },
-                  );
-                },
-              ),
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: memberships
+                        .map(
+                          (card) => MembershipCard(
+                            data: card,
+                            onTap: () {},
+                          ),
+                        )
+                        .toList(),
+                  ),
+                );
+              },
             ),
 
             /// LATEST PACKAGES CAROUSEL (FILTERED)

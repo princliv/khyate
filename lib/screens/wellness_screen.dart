@@ -268,7 +268,7 @@ Row(
         style: TextStyle(color: subTextColor)
     ),
 
-    Text("₹ ${d['price']}",
+    Text("AED ${d['price']}",
         style: TextStyle(color: headlineColor)
     ),
   ],

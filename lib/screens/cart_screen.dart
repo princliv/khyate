@@ -54,7 +54,7 @@ class CartScreen extends StatelessWidget {
                           title: Text(item.title,
                               style: TextStyle(color: textColor)),
                           subtitle: Text(
-                            "₹ ${item.price}",
+                            "AED ${item.price}",
                             style: TextStyle(color: Colors.greenAccent),
                           ),
                           trailing: IconButton(
@@ -93,7 +93,7 @@ class CartScreen extends StatelessWidget {
                                 color: textColor),
                           ),
                           Text(
-                            "₹ ${cart.totalPrice}",
+                            "AED ${cart.totalPrice}",
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
