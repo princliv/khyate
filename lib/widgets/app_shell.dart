@@ -1,8 +1,10 @@
+import 'package:Outbox/screens/admin_dashboard.dart';
+import 'package:Outbox/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:khyate_b2b/screens/admin_dashboard.dart';
-import 'package:khyate_b2b/screens/profile_screen.dart';
+// import 'package:khyate_b2b/screens/admin_dashboard.dart';
+// import 'package:khyate_b2b/screens/profile_screen.dart';
 // import 'dashboard_screen.dart'; // ← Create this screen
 
 typedef AppShellPageBuilder = Widget Function(

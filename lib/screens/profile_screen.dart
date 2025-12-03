@@ -1,7 +1,9 @@
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/auth_service.dart';
@@ -29,6 +31,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool isLoading = true;
   bool _isDarkMode = false;
+Country? selectedCountry;  
+String selectedCountryName = "United Arab Emirates";
+String selectedCountryCode = "+971";
+
+bool phoneValid = true;
+String fullPhone = "";
+
 
   @override
   void initState() {
@@ -134,6 +143,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+  void pickCountry() {
+  showCountryPicker(
+    context: context,
+    showPhoneCode: true,
+    onSelect: (Country country) {
+      setState(() {
+        selectedCountryCode = "+${country.phoneCode}";
+        selectedCountryName = country.name;
+      });
+    },
+  );
+}
+
 
   Future<void> _handleLogout(BuildContext context) async {
     await AuthService().signOut();
@@ -457,6 +479,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+Widget buildPhoneField() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Phone Number",
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 10),
+
+      IntlPhoneField(
+        controller: phone,
+        initialCountryCode: 'AE',
+        decoration: InputDecoration(
+          hintText: "Enter phone number",
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+
+        onChanged: (value) {
+          setState(() {
+            fullPhone = value.completeNumber;
+            phoneValid = value.isValidNumber();
+          });
+        },
+      ),
+
+      if (phone.text.isNotEmpty)
+        Text(
+          phoneValid ? "✔ Valid number" : "✖ Invalid number",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: phoneValid ? Colors.green : Colors.red,
+          ),
+        ),
+    ],
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -678,35 +744,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
 
               // CONTACT INFO
-              buildCard(
-                title: "Contact Information",
-                showEdit: true,
-                isDark: isDark,
-                onEdit: () {
-                  showEditDialog(
-                    title: "Edit Contact Information",
-                    fields: [
-                      _buildTextField(address, "Address", Icons.home),
-                      _buildTextField(country, "Country", Icons.flag),
-                      _buildTextField(phone, "Phone", Icons.phone),
-                    ],
-                    onSave: () {
-                      updateSection({
-                        "address": address.text,
-                        "country": country.text,
-                        "phone": phone.text,
-                      });
-                      Navigator.pop(context);
-                      setState(() {});
-                    },
-                  );
-                },
-                children: [
-                  infoRow("Address", address.text, textColor, Icons.home, isDark),
-                  infoRow("Country", country.text, textColor, Icons.flag, isDark),
-                  infoRow("Phone", phone.text, textColor, Icons.phone, isDark),
-                ],
-              ),
+// CONTACT INFO
+buildCard(
+  title: "Contact Information",
+  showEdit: true,
+  isDark: isDark,
+  onEdit: () {
+  showEditDialog(
+    title: "Edit Contact Information",
+    fields: [
+      StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Column(
+            children: [
+              buildCountryPickerField(setDialogState),
+              const SizedBox(height: 20),
+              buildPhoneField(),
+              const SizedBox(height: 20),
+              _buildTextField(address, "Address", Icons.location_on),
+            ],
+          );
+        },
+      )
+    ],
+    onSave: () async {
+      if (!phoneValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invalid phone number"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Update text values for UI
+      country.text = selectedCountryName;
+      phone.text = fullPhone;
+
+      await updateSection({
+        "phone": fullPhone,
+        "country": selectedCountryName,
+        "address": address.text,
+      });
+
+      Navigator.pop(context);
+      setState(() {});
+    },
+  );
+},
+
+  children: [
+    infoRow("Address", address.text, textColor, Icons.home, isDark),
+    infoRow("Country", country.text, textColor, Icons.flag, isDark),
+    infoRow("Phone", phone.text, textColor, Icons.phone, isDark),
+  ],
+),
+
             ],
           ),
         ),
@@ -749,6 +843,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+Widget buildCountryPickerField(StateSetter setDialogState) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Country",
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 10),
+
+      InkWell(
+        onTap: () {
+          showCountryPicker(
+            context: context,
+            showPhoneCode: true,
+            onSelect: (Country c) {
+              setDialogState(() {
+                selectedCountry = c;
+                selectedCountryName = c.name;
+                selectedCountryCode = "+${c.phoneCode}";
+              });
+            },
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade400),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                selectedCountryName,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const Icon(Icons.arrow_drop_down),
+            ],
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 10),
+
+      Text(
+        "Code: $selectedCountryCode",
+        style: const TextStyle(
+          color: Colors.blueGrey,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ],
+  );
+}
+
 
   Widget _buildDatePickerField() {
     final isDark = _isDarkMode;

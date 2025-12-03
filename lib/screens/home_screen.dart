@@ -1,7 +1,10 @@
+import 'package:Outbox/screens/cart_screen.dart';
+import 'package:Outbox/screens/fitness_screen.dart';
+import 'package:Outbox/screens/wellness_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:khyate_b2b/screens/cart_screen.dart';
-import 'package:khyate_b2b/screens/fitness_screen.dart';
-import 'package:khyate_b2b/screens/wellness_screen.dart';
+// import 'package:khyate_b2b/screens/cart_screen.dart';
+// import 'package:khyate_b2b/screens/fitness_screen.dart';
+// import 'package:khyate_b2b/screens/wellness_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/auth_service.dart';
