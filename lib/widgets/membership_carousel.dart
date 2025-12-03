@@ -5,11 +5,6 @@ import 'package:Outbox/services/purchase_status_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-// import 'package:khyate_b2b/models/cart_model.dart';
-// import 'package:khyate_b2b/models/membership_model.dart';
-// import 'package:khyate_b2b/providers/cart_provider.dart';
-// import 'package:khyate_b2b/services/purchase_status_service.dart';
-// import 'package:khyate_b2b/widgets/review_widget.dart';
 import 'package:provider/provider.dart';
 
 class MembershipCarousel extends StatelessWidget {
@@ -139,15 +134,23 @@ class MembershipCarousel extends StatelessWidget {
                         child: Text(card.tag),
                       ),
                       const Spacer(),
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFCEF9EF),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(card.classes),
-                      ),
+Flexible(
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: Color(0xFFF1F1F1),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Text(
+      card.tag,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      softWrap: false,
+    ),
+  ),
+),
+
+
                     ],
                   ),
 
