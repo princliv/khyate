@@ -203,6 +203,9 @@ StreamBuilder<QuerySnapshot>(
 
     return Column(
       children: docs.map((d) {
+        final data = d.data() as Map<String, dynamic>;
+        final String imageUrl = (data['imageUrl'] as String?) ?? '';
+
         return Container(
           margin: EdgeInsets.only(bottom: 20),
           padding: EdgeInsets.all(16),
@@ -222,19 +225,26 @@ StreamBuilder<QuerySnapshot>(
               // IMAGE
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  d['imageUrl'],
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.asset(
+                        'assets/default_thumbnail.webp',
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
               ),
 
               const SizedBox(height: 12),
 
               // TITLE
               Text(
-                d['title'],
+                data['title'],
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -246,7 +256,7 @@ StreamBuilder<QuerySnapshot>(
 
               // SUBTITLE
               Text(
-                d['subtitle'],
+                data['subtitle'],
                 style: TextStyle(
                   fontSize: 16,
                   color: subTextColor,
@@ -259,20 +269,20 @@ StreamBuilder<QuerySnapshot>(
 Row(
   mainAxisAlignment: MainAxisAlignment.spaceBetween,
   children: [
-    Text("🕒 ${d['duration']}",
+    Text("🕒 ${data['duration']}",
         style: TextStyle(color: subTextColor)
     ),
 
-    Text("📅 ${d.data().toString().contains('date') ? d['date'] : 'No Date'}",
+    Text("📅 ${data.toString().contains('date') ? data['date'] : 'No Date'}",
   style: TextStyle(color: subTextColor),
 ),
 
 
-    Text("👤 ${d['mentor']}",
+    Text("👤 ${data['mentor']}",
         style: TextStyle(color: subTextColor)
     ),
 
-    Text("AED ${d['price']}",
+    Text("AED ${data['price']}",
         style: TextStyle(color: headlineColor)
     ),
   ],
@@ -285,7 +295,7 @@ Row(
 
               // DESCRIPTION
               Text(
-                d['description'],
+                data['description'],
                 style: TextStyle(
                   fontSize: 15,
                   color: subTextColor,
@@ -322,25 +332,79 @@ FutureBuilder<bool>(
 
     }
 
-    return ElevatedButton(
-      onPressed: () {
-        Provider.of<CartProvider>(context, listen: false).addItem(
-          CartItem(
-            id: d.id,
-            title: d['title'],
-            imageUrl: d['imageUrl'],
-            price: int.parse(d['price']),
-            type: "wellness",
+    final cartItems = Provider.of<CartProvider>(context).items;
+    final isInCart = cartItems.any((item) => item.id == d.id);
+
+    if (isInCart) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 45,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0F7E9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              "Added",
+              style: TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        );
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.teal,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 32,
+            child: TextButton(
+              onPressed: () {
+                Provider.of<CartProvider>(context, listen: false).removeItem(d.id);
+              },
+              child: const Text(
+                "Remove",
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Standardized "Add to Cart" button styling
+    return SizedBox(
+      height: 45,
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {
+          Provider.of<CartProvider>(context, listen: false).addItem(
+            CartItem(
+              id: d.id,
+              title: data['title'],
+              imageUrl: imageUrl.isNotEmpty
+                  ? imageUrl
+                  : 'assets/default_thumbnail.webp',
+              price: int.parse(data['price']),
+              type: "wellness",
+            ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1A73E8), // Google blue
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
+        child: const Text("Add to Cart"),
       ),
-      child: Text("Add to Cart"),
     );
   },
 )

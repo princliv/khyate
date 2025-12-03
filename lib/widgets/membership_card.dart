@@ -40,12 +40,19 @@ class MembershipCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: Image.network(
-                data.imageUrl,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              child: data.imageUrl.isNotEmpty
+                  ? Image.network(
+                      data.imageUrl,
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.asset(
+                      'assets/default_thumbnail.webp',
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
@@ -171,6 +178,9 @@ class MembershipCard extends StatelessWidget {
 
                       final purchased = snapshot.data!;
 
+                      final cartItems = Provider.of<CartProvider>(context).items;
+                      final isInCart = cartItems.any((item) => item.id == data.id);
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -188,36 +198,52 @@ class MembershipCard extends StatelessWidget {
                                       style: TextStyle(color: Colors.white),
                                     ),
                                   )
-                                : ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFFE3EE),
-                                      foregroundColor: const Color(0xFFD81B60),
-                                      textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.3,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      Provider.of<CartProvider>(context, listen: false)
-                                          .addItem(
-                                        CartItem(
-                                          id: data.id,
-                                          title: data.title,
-                                          imageUrl: data.imageUrl,
-                                          price: int.parse(data.price),
-                                          type: "membership",
+                                : isInCart
+                                    ? Container(
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE0F7E9),
+                                          borderRadius: BorderRadius.circular(12),
                                         ),
-                                      );
+                                        child: const Text(
+                                          "Added",
+                                          style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      )
+                                    : ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF1A73E8), // Google blue
+                                          foregroundColor: Colors.white,
+                                          textStyle: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          Provider.of<CartProvider>(context, listen: false).addItem(
+                                            CartItem(
+                                              id: data.id,
+                                              title: data.title,
+                                              imageUrl: data.imageUrl.isNotEmpty
+                                                  ? data.imageUrl
+                                                  : 'assets/default_thumbnail.webp',
+                                              price: int.parse(data.price),
+                                              type: "membership",
+                                            ),
+                                          );
 
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text("${data.title} added to cart")),
-                                      );
-                                    },
-                                    child: const Text("Add to Cart"),
-                                  ),
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text("${data.title} added to cart")),
+                                          );
+                                        },
+                                        child: const Text("Add to Cart"),
+                                      ),
                           ),
                           const SizedBox(height: 6),
                           SizedBox(
@@ -229,13 +255,12 @@ class MembershipCard extends StatelessWidget {
                                         context: context,
                                         builder: (dialogContext) {
                                           return Dialog(
-                                            insetPadding: const EdgeInsets.symmetric(
-                                                horizontal: 24, vertical: 24),
+                                            insetPadding:
+                                                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                                             shape: RoundedRectangleBorder(
                                                 borderRadius: BorderRadius.circular(20)),
                                             child: ConstrainedBox(
-                                              constraints:
-                                                  const BoxConstraints(maxWidth: 380),
+                                              constraints: const BoxConstraints(maxWidth: 380),
                                               child: Padding(
                                                 padding: const EdgeInsets.all(20),
                                                 child: SingleChildScrollView(
@@ -257,7 +282,21 @@ class MembershipCard extends StatelessWidget {
                                       ),
                                     ),
                                   )
-                                : const SizedBox.shrink(),
+                                : isInCart
+                                    ? TextButton(
+                                        onPressed: () {
+                                          Provider.of<CartProvider>(context, listen: false)
+                                              .removeItem(data.id);
+                                        },
+                                        child: const Text(
+                                          "Remove",
+                                          style: TextStyle(
+                                            color: Colors.redAccent,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
                           ),
                         ],
                       );

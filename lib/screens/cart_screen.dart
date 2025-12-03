@@ -13,7 +13,8 @@ class CartScreen extends StatelessWidget {
 
     final bg = isDarkMode ? Colors.black : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
-    final cardColor = isDarkMode ? Colors.grey[900] : Colors.black12;
+    final cardColor =
+        isDarkMode ? const Color(0xFF101822) : Colors.grey.shade100;
 
     return Scaffold(
       backgroundColor: bg,
@@ -42,29 +43,115 @@ class CartScreen extends StatelessWidget {
                     itemCount: cart.items.length,
                     itemBuilder: (context, index) {
                       final item = cart.items[index];
+                      final bool isNetworkImage = item.imageUrl.startsWith('http');
 
                       return Container(
-                        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        margin:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(12),
+                          color: isDarkMode ? const Color(0xFF1A2332) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            if (!isDarkMode)
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                          ],
                         ),
-                        child: ListTile(
-                          leading: Image.network(item.imageUrl, width: 60),
-                          title: Text(item.title,
-                              style: TextStyle(color: textColor)),
-                          subtitle: Text(
-                            "AED ${item.price}",
-                            style: TextStyle(color: Colors.greenAccent),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(Icons.delete,
-                                color: isDarkMode
-                                    ? Colors.redAccent
-                                    : Colors.red),
-                            onPressed: () {
-                              cart.removeItem(item.id);
-                            },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              // Thumbnail
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: isNetworkImage
+                                    ? Image.network(
+                                        item.imageUrl,
+                                        width: 64,
+                                        height: 64,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.asset(
+                                        item.imageUrl,
+                                        width: 64,
+                                        height: 64,
+                                        fit: BoxFit.cover,
+                                      ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Title, type chip and price
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: isDarkMode
+                                                ? Colors.white10
+                                                : const Color(0xFFE8F0FE),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            item.type.toUpperCase(),
+                                            style: TextStyle(
+                                              color: isDarkMode
+                                                  ? Colors.white70
+                                                  : const Color(0xFF1A73E8),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "AED ${item.price}",
+                                          style: const TextStyle(
+                                            color: Color(0xFF16AE8E),
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Delete button
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: isDarkMode
+                                      ? Colors.redAccent
+                                      : const Color(0xFFE53935),
+                                ),
+                                onPressed: () {
+                                  cart.removeItem(item.id);
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );

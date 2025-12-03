@@ -25,13 +25,13 @@ class _FitnessScreenState extends State<FitnessScreen> {
 
   /// Session descriptions map
   static const Map<String, String> sessionDescriptions = {
-    "OUTRUSH": "OutRush is a high-intensity, heart-pumping cardio class ...",
-    "OUTBEAT": "OutBeat is a rhythmic cardio workout ...",
-    "OUTSTEP": "OutStep is a step-based aerobics class ...",
-    "OUTLIFT": "OutLift is a strength-training workout ...",
-    "OUTFIT": "OutFit is a functional fitness class ...",
-    "OUTMOVE": "OutMove is a bodyweight training session ...",
-    "OUTCORE": "OutCore is a focused core-strengthening class ...",
+    "OUTRUSH": "OutRush is a high-intensity, heart-pumping cardio class that takes you through intervals of explosive movements like sprints, jumps, and quick footwork. Designed for all fitness levels, this workout will challenge your endurance and leave you feeling exhilarated. Our energizing playlist and motivating coaches will push you past your limits — helping you torch serious calories and improve cardiovascular fitness. OutRush is offered in 30 or 45-minute sessions.",
+    "OUTBEAT": "OutBeat is a rhythmic cardio workout that blends dance-inspired movements with easy-to-follow routines. Powered by upbeat tracks, this session is all about moving to the rhythm, boosting your stamina, and having fun. Perfect for anyone who loves music and dance, this feel-good class will leave you sweating, smiling, and energized. OutBeat is offered in 45 or 60-minute sessions.",
+    "OUTSTEP": "OutStep is a step-based aerobics class that brings a classic workout into a new era. You’ll step up, down, and across the platform to the beat of motivating tunes. Designed for all fitness levels, this class enhances coordination, balance, and cardio fitness — all while toning your legs and glutes. OutStep is offered as a 30, 45, or 60-minute workout.",
+    "OUTLIFT": "OutLift is a strength-training workout that targets every major muscle group using barbells, dumbbells, and bodyweight exercises. Our expert trainers will coach you through lifting techniques with the perfect mix of power and control. Get ready to build lean muscle, boost metabolism, and feel stronger every session. OutLift is offered in 45 or 60-minute sessions.",
+    "OUTFIT": "OutFit is a functional fitness class designed to mimic real-life movements like pushing, pulling, and lifting. You’ll improve strength, endurance, mobility, and coordination using a mix of bodyweight exercises and light equipment. Every workout is different — keeping your body challenged and your fitness balanced. OutFit is offered as a 45 or 60-minute workout.",
+    "OUTMOVE": "OutMove is a bodyweight training session where no equipment is required — just your energy and drive. Combining exercises like lunges, squats, planks, and mobility drills, this class is perfect for toning muscles, improving flexibility, and burning calories. It’s an accessible workout that can scale up or down for all fitness levels. OutMove is offered in 30 or 45-minute sessions.",
+    "OUTCORE": "OutCore is a focused core-conditioning class that will help you build a strong, stable center. With exercises like planks, bridges, twists, and controlled movements, this session improves balance, posture, and overall functional strength. It’s short, sharp, and highly effective — making it a must-do addition to your fitness routine. OutCore is offered in 30-minute sessions.",
   };
 
   /// Session image paths map

@@ -92,7 +92,7 @@ class MembershipCarousel extends StatelessWidget {
       width: 300,
       margin: const EdgeInsets.symmetric(horizontal: 12),
       child: SizedBox(
-        height: 420,
+        height: 470,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -106,12 +106,19 @@ class MembershipCarousel extends StatelessWidget {
               /// IMAGE
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                child: Image.network(
-                  card.imageUrl,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                child: card.imageUrl.isNotEmpty
+                    ? Image.network(
+                        card.imageUrl,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.asset(
+                        'assets/default_thumbnail.webp',
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
               ),
 
               /// DETAILS
@@ -262,6 +269,9 @@ if (card.location.isNotEmpty) ...[
                           }
 
                           final purchased = snapshot.data!;
+                          final cartItems = Provider.of<CartProvider>(context).items;
+                          final isInCart = cartItems.any((item) => item.id == card.id);
+
                           if (purchased) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -312,25 +322,78 @@ if (card.location.isNotEmpty) ...[
                             );
                           }
 
-                          return ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () {
-                              Provider.of<CartProvider>(context, listen: false).addItem(
-                                CartItem(
-                                  id: card.id,
-                                  title: card.title,
-                                  imageUrl: card.imageUrl,
-                                  price: int.parse(card.price),
-                                  type: "membership_carousel",
+                          if (isInCart) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  height: 45,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0F7E9),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Text(
+                                    "Added",
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
-                              );
-                            },
-                            child: const Text("Add to Cart"),
+                                const SizedBox(height: 6),
+                                SizedBox(
+                                  height: 32,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Provider.of<CartProvider>(context, listen: false)
+                                          .removeItem(card.id);
+                                    },
+                                    child: const Text(
+                                      "Remove",
+                                      style: TextStyle(
+                                        color: Colors.redAccent,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+
+                          // Standardized "Add to Cart" button styling
+                          return SizedBox(
+                            height: 45,
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1A73E8), // Google blue
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: () {
+                                Provider.of<CartProvider>(context, listen: false)
+                                    .addItem(
+                                  CartItem(
+                                    id: card.id,
+                                    title: card.title,
+                                    imageUrl: card.imageUrl.isNotEmpty
+                                        ? card.imageUrl
+                                        : 'assets/default_thumbnail.webp',
+                                    price: int.parse(card.price),
+                                    type: "membership_carousel",
+                                  ),
+                                );
+                              },
+                              child: const Text("Add to Cart"),
+                            ),
                           );
                         },
                       ),

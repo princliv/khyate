@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/hero_section.dart';
 import '../widgets/section_card.dart';
+import 'coming_soon_screen.dart';
 import 'home/components/home_story_section.dart';
 import 'home/components/home_logo_story_section.dart';
 import 'home/components/home_values_section.dart';
@@ -188,7 +189,11 @@ class _HomeLanding extends StatelessWidget {
                       Color(0xFFA855F7),
                     ],
                     onTap: () {
-                      AppShell.navigateToTab(context, 2);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ComingSoonScreen(isDarkMode: isDarkMode),
+                        ),
+                      );
                     },
                     isDarkMode: isDarkMode,
                     isFullWidth: true,

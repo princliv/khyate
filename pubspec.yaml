@@ -80,6 +80,7 @@ flutter:
       - assets/company.png
       - assets/google_logo.png
       - assets/loginlogo.png
+      - assets/default_thumbnail.webp
       # - assets/fitness_sessions/
 
   # To add assets to your application, add an assets section, like this:
