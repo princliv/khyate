@@ -1,6 +1,7 @@
+import 'package:Outbox/screens/purchase_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:khyate_b2b/screens/purchase_list_screen.dart';
+// import 'package:khyate_b2b/screens/purchase_list_screen.dart';
 
 class WellnessCardManager extends StatefulWidget {
   @override

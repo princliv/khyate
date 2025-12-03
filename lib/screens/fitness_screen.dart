@@ -1,6 +1,7 @@
+import 'package:Outbox/widgets/membership_carousel.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:khyate_b2b/widgets/membership_carousel.dart';
+//import 'package:khyate_b2b/widgets/membership_carousel.dart';
 import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/todays_classes_component.dart';
 import '../widgets/membership_card.dart';

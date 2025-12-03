@@ -1,8 +1,11 @@
+import 'package:Outbox/screens/admin/trainer_manager.dart';
+import 'package:Outbox/screens/admin/wellness_card_manager.dart';
+import 'package:Outbox/screens/purchase_list_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
-import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
-import 'package:khyate_b2b/screens/purchase_list_screen.dart';
+// import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
+// import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
+// import 'package:khyate_b2b/screens/purchase_list_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 

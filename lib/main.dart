@@ -1,10 +1,12 @@
+import 'package:Outbox/providers/cart_provider.dart';
+import 'package:Outbox/screens/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';   // ✅ IMPORTANT
-import 'package:khyate_b2b/screens/onboarding_screen.dart';
-import 'package:khyate_b2b/providers/cart_provider.dart';    // ✅ YOUR CART PROVIDER
+// import 'package:khyate_b2b/screens/onboarding_screen.dart';
+// import 'package:khyate_b2b/providers/cart_provider.dart';    // ✅ YOUR CART PROVIDER
 import 'services/notification_service.dart';
 
 void main() async {
