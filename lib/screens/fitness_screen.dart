@@ -243,18 +243,6 @@ const SizedBox(height: 92),
                 ),
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    "Show all →",
-                    style: TextStyle(color: Color(0xFFFF6767), fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
 
             /// FILTERED TOP MEMBERSHIP CARDS
             StreamBuilder<List<MembershipCardData>>(
