@@ -1,4 +1,5 @@
 import 'package:Outbox/widgets/membership_carousel.dart';
+import 'package:Outbox/widgets/todays_classes_list.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 //import 'package:khyate_b2b/widgets/membership_carousel.dart';
@@ -123,7 +124,8 @@ class _FitnessScreenState extends State<FitnessScreen> {
     return Scaffold(
       backgroundColor: scaffoldBackground,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+  padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+
         child: Column(
           children: [
             const SizedBox(height: 56),
@@ -225,15 +227,10 @@ class _FitnessScreenState extends State<FitnessScreen> {
 
             const SizedBox(height: 28),
             FitnessSessionsGrid(sessions: sessions, isDarkMode: widget.isDarkMode),
-            const SizedBox(height: 28),
-            TodaysClassesComponent(
-              totalClasses: 27,
-              dateString: "11-11-2025",
-              hasPackage: false,
-              onShowAllPressed: () {},
-              onChoosePackagePressed: () {},
-            ),
-            const SizedBox(height: 32),
+const SizedBox(height: 28),
+const TodaysClassesList(),
+const SizedBox(height: 92),
+
 
             /// TOP MEMBERSHIP SECTION
             Align(
