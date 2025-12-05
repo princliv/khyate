@@ -202,141 +202,6 @@ class _HomeLanding extends StatelessWidget {
               ),
             ),
 
-            // Today's Highlights
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Today's Highlights",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'See All',
-                      style: TextStyle(
-                        color: accentColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Stats Cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.local_fire_department_rounded,
-                      value: '12',
-                      label: 'Active Streak',
-                      color: const Color(0xFFFF6B6B),
-                      isDarkMode: isDarkMode,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.calendar_today_rounded,
-                      value: '24',
-                      label: 'This Week',
-                      color: const Color(0xFF3B82F6),
-                      isDarkMode: isDarkMode,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.star_rounded,
-                      value: '4.8',
-                      label: 'Rating',
-                      color: const Color(0xFFFFD700),
-                      isDarkMode: isDarkMode,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Featured Session
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _FeaturedSessionCard(
-                title: 'Morning Yoga Flow',
-                instructor: 'Sarah Lindsey',
-                time: '07:00 AM',
-                imageUrl:
-                    'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
-                isDarkMode: isDarkMode,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Quick Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.search_rounded,
-                          label: 'Find Classes',
-                          color: accentColor,
-                          isDarkMode: isDarkMode,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.bookmark_rounded,
-                          label: 'Saved',
-                          color: const Color(0xFFEC4899),
-                          isDarkMode: isDarkMode,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.history_rounded,
-                          label: 'History',
-                          color: const Color(0xFF3B82F6),
-                          isDarkMode: isDarkMode,
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
             const SizedBox(height: 24),
 
             // Our Values Section (Condensed App Version)
@@ -572,8 +437,10 @@ class _ValueCardApp extends StatelessWidget {
           const Spacer(),
           Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: textColor,
             ),
