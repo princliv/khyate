@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
@@ -7,6 +8,53 @@ import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+
+// Emirates ID TextInputFormatter for auto-formatting
+class EmiratesIdFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    
+    // Remove all non-digit characters
+    final digitsOnly = text.replaceAll(RegExp(r'[^\d]'), '');
+    
+    // Limit to 15 digits
+    final limitedDigits = digitsOnly.length > 15 
+        ? digitsOnly.substring(0, 15) 
+        : digitsOnly;
+    
+    // Format as 784-YYYY-NNNNNNN-X
+    // Format: 3 digits (784) - 4 digits (YYYY) - 7 digits (NNNNNNN) - 1 digit (X)
+    String formatted = '';
+    for (int i = 0; i < limitedDigits.length; i++) {
+      // Add hyphen after 3rd digit (before 4th digit)
+      if (i == 3) {
+        formatted += '-';
+      }
+      // Add hyphen after 7th digit (before 8th digit)
+      else if (i == 7) {
+        formatted += '-';
+      }
+      // Add hyphen after 14th digit (before 15th digit)
+      else if (i == 14) {
+        formatted += '-';
+      }
+      formatted += limitedDigits[i];
+    }
+    
+    // Calculate cursor position
+    // Count hyphens before cursor position
+    int cursorPosition = formatted.length;
+    
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: cursorPosition),
+    );
+  }
+}
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -24,6 +72,8 @@ class _SignupScreenState extends State<SignupScreen>
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController emiratesIdController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+  final TextEditingController birthdayController = TextEditingController();
+  final TextEditingController countryController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   DateTime? birthday;
@@ -59,8 +109,79 @@ class _SignupScreenState extends State<SignupScreen>
     confirmPasswordController.dispose();
     emiratesIdController.dispose();
     addressController.dispose();
+    birthdayController.dispose();
+    countryController.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Validate Emirates ID
+  String? _validateEmiratesId(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your Emirates ID';
+    }
+    
+    // Remove hyphens and spaces for validation
+    final digitsOnly = value.replaceAll(RegExp(r'[-\s]'), '');
+    
+    // Check length (must be 15 digits)
+    if (digitsOnly.length != 15) {
+      return 'Emirates ID must be 15 digits (format: 784-XXXX-XXXXXXX-X)';
+    }
+    
+    // Check if it starts with 784 (UAE country code)
+    if (!digitsOnly.startsWith('784')) {
+      return 'Emirates ID must start with 784';
+    }
+    
+    // Validate format: 784-YYYY-NNNNNNN-X
+    // Check if formatted correctly (with hyphens) or just digits
+    if (value.contains('-')) {
+      final formatRegex = RegExp(r'^784-\d{4}-\d{7}-\d$');
+      if (!formatRegex.hasMatch(value)) {
+        return 'Invalid Emirates ID format. Expected: 784-XXXX-XXXXXXX-X';
+      }
+    }
+    
+    // Extract year (positions 4-7 in digitsOnly, which are indices 3-6)
+    final yearStr = digitsOnly.substring(3, 7);
+    final year = int.tryParse(yearStr);
+    if (year == null || year < 1900 || year > DateTime.now().year) {
+      return 'Invalid year in Emirates ID (must be between 1900 and ${DateTime.now().year})';
+    }
+    
+    // Check for invalid characters (only digits and hyphens allowed)
+    if (RegExp(r'[^\d-]').hasMatch(value)) {
+      return 'Emirates ID can only contain digits and hyphens';
+    }
+    
+    // Validate that all characters are digits (when hyphens removed)
+    if (!RegExp(r'^\d{15}$').hasMatch(digitsOnly)) {
+      return 'Emirates ID must contain only digits';
+    }
+    
+    return null;
+  }
+
+  // Check if Emirates ID already exists
+  Future<bool> _checkEmiratesIdDuplicate(String emiratesId) async {
+    try {
+      // Remove hyphens for comparison (we store without hyphens)
+      final digitsOnly = emiratesId.replaceAll('-', '');
+      
+      // Check if any user has this Emirates ID (stored without hyphens)
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('emiratesId', isEqualTo: digitsOnly)
+          .limit(1)
+          .get();
+      
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      // If there's an error checking, allow the signup to proceed
+      // (better to allow than block legitimate users)
+      return false;
+    }
   }
 
   Future<void> signUp() async {
@@ -72,19 +193,35 @@ class _SignupScreenState extends State<SignupScreen>
     });
 
     try {
+      // Check for duplicate Emirates ID
+      final emiratesId = emiratesIdController.text.trim();
+      if (emiratesId.isNotEmpty) {
+        final isDuplicate = await _checkEmiratesIdDuplicate(emiratesId);
+        if (isDuplicate) {
+          setState(() {
+            message = 'This Emirates ID is already registered';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
       final userCredential = await AuthService().signUp(
         emailController.text,
         passwordController.text,
       );
       final uid = userCredential?.uid;
       if (uid != null) {
+        // Store Emirates ID with hyphens removed for consistency
+        final emiratesIdStored = emiratesId.replaceAll('-', '');
+        
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': firstNameController.text,
           'lastName': lastNameController.text,
           'email': emailController.text,
           'birthday': birthday != null ? DateFormat('yyyy-MM-dd').format(birthday!) : '',
           'gender': selectedGender ?? '',
-          'emiratesId': emiratesIdController.text,
+          'emiratesId': emiratesIdStored,
           'address': addressController.text,
           'country': selectedCountry != null ? selectedCountry!.name : '',
           'flagEmoji': selectedCountry != null ? selectedCountry!.flagEmoji : '',
@@ -194,7 +331,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Enter your first name',
+                            hintText: 'Enter first name.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.person_outline,
@@ -247,7 +384,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Enter your last name',
+                            hintText: 'Enter last name.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.person_outline,
@@ -358,7 +495,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Enter your password',
+                            hintText: 'Enter password.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.lock_outlined,
@@ -428,7 +565,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Confirm your password',
+                            hintText: 'Confirm password.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.lock_outlined,
@@ -488,7 +625,7 @@ class _SignupScreenState extends State<SignupScreen>
                 onTap: () async {
                   final pickedDate = await showDatePicker(
                     context: context,
-                    initialDate: DateTime(1990, 1, 1),
+                    initialDate: birthday ?? DateTime(1990, 1, 1),
                     firstDate: DateTime(1900),
                               lastDate: DateTime.now(),
                               builder: (context, child) {
@@ -506,20 +643,22 @@ class _SignupScreenState extends State<SignupScreen>
                               },
                             );
                             if (pickedDate != null) {
-                              setState(() => birthday = pickedDate);
+                              setState(() {
+                                birthday = pickedDate;
+                                birthdayController.text = DateFormat('MMM dd, yyyy').format(pickedDate);
+                              });
                             }
                 },
                 child: AbsorbPointer(
                             child: TextFormField(
+                    controller: birthdayController,
                     decoration: InputDecoration(
                       labelText: 'Birthday',
                                 labelStyle: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
-                      hintText: birthday == null
-                                    ? 'Select your birthday'
-                                    : DateFormat('MMM dd, yyyy').format(birthday!),
+                      hintText: 'Select your birthday',
                                 hintStyle: TextStyle(color: Colors.grey.shade400),
                                 prefixIcon: Icon(
                                   Icons.cake_outlined,
@@ -568,7 +707,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Select your gender',
+                            hintText: 'Select gender.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.person_outline,
@@ -617,7 +756,12 @@ class _SignupScreenState extends State<SignupScreen>
                         // Emirates ID field
                         TextFormField(
                 controller: emiratesIdController,
+                          keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            EmiratesIdFormatter(),
+                            FilteringTextInputFormatter.deny(RegExp(r'\s')), // Deny spaces only (formatter handles the rest)
+                          ],
                           style: const TextStyle(
                             fontSize: 16,
                             color: Color(0xFF1A2332),
@@ -628,7 +772,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Enter your Emirates ID',
+                            hintText: 'Enter Emirates ID.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.badge_outlined,
@@ -657,7 +801,22 @@ class _SignupScreenState extends State<SignupScreen>
                                 width: 2,
                               ),
                             ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade300,
+                                width: 1.5,
+                              ),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade400,
+                                width: 2,
+                              ),
+                            ),
                           ),
+                          validator: _validateEmiratesId,
                         ),
                         const SizedBox(height: 20),
 
@@ -675,7 +834,7 @@ class _SignupScreenState extends State<SignupScreen>
                               color: Colors.grey.shade600,
                               fontSize: 16,
                             ),
-                            hintText: 'Enter your address',
+                            hintText: 'Enter address.',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: Icon(
                               Icons.home_outlined,
@@ -715,21 +874,23 @@ class _SignupScreenState extends State<SignupScreen>
                     context: context,
                     showPhoneCode: false,
                     onSelect: (Country country) {
-                      setState(() => selectedCountry = country);
+                      setState(() {
+                        selectedCountry = country;
+                        countryController.text = '${country.flagEmoji} ${country.name}';
+                      });
                     },
                   );
                 },
                 child: AbsorbPointer(
                             child: TextFormField(
+                    controller: countryController,
                     decoration: InputDecoration(
                       labelText: 'Country',
                                 labelStyle: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 16,
                                 ),
-                      hintText: selectedCountry == null
-                          ? 'Select country'
-                          : '${selectedCountry!.flagEmoji} ${selectedCountry!.name}',
+                      hintText: 'Select country',
                                 hintStyle: TextStyle(color: Colors.grey.shade400),
                                 prefixIcon: Icon(
                                   Icons.flag_outlined,
