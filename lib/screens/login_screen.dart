@@ -45,6 +45,37 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  String _getErrorMessage(dynamic error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'Incorrect password';
+        case 'user-not-found':
+          return 'No account found with this email';
+        case 'user-disabled':
+          return 'This account has been disabled';
+        case 'too-many-requests':
+          return 'Too many failed attempts. Please try again later';
+        case 'invalid-email':
+          return 'Invalid email address';
+        case 'network-request-failed':
+          return 'Network error. Please check your connection';
+        default:
+          // Remove bracketed content from the message
+          String errorMessage = error.message ?? error.toString();
+          // Remove content in brackets like [firebase/...]
+          errorMessage = errorMessage.replaceAll(RegExp(r'\[.*?\]'), '').trim();
+          // If message is empty after removing brackets, use a generic message
+          return errorMessage.isEmpty ? 'An error occurred. Please try again' : errorMessage;
+      }
+    }
+    // For non-Firebase errors, remove bracketed content
+    String errorMessage = error.toString();
+    errorMessage = errorMessage.replaceAll(RegExp(r'\[.*?\]'), '').trim();
+    return errorMessage.isEmpty ? 'An error occurred. Please try again' : errorMessage;
+  }
+
   void signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -61,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen>
         context, MaterialPageRoute(builder: (context) => const HomeScreen()));
     } catch (e) {
       setState(() {
-        message = e.toString();
+        message = _getErrorMessage(e);
         _isLoading = false;
       });
     }
@@ -133,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen>
         context, MaterialPageRoute(builder: (context) => const HomeScreen()));
     } catch (e) {
       setState(() {
-        message = e.toString();
+        message = _getErrorMessage(e);
         _isLoading = false;
       });
     }

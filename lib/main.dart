@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Khyate B2B',
+        title: 'Outbox',
         debugShowCheckedModeBanner: false,
         home: OnboardingScreen(),
       ),
