@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/fitness_session_modal.dart';
+import '../widgets/wellness_modal.dart';
 
 class WellnessScreen extends StatelessWidget {
   final bool isDarkMode;
@@ -206,20 +207,25 @@ StreamBuilder<QuerySnapshot>(
         final data = d.data() as Map<String, dynamic>;
         final String imageUrl = (data['imageUrl'] as String?) ?? '';
 
-        return Container(
-          margin: EdgeInsets.only(bottom: 20),
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.black26 : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 8,
-                color: Colors.black12,
-              )
-            ],
-          ),
-          child: Column(
+        return InkWell(
+          onTap: () {
+            WellnessModal.show(context, data, d.id, isDarkMode);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            margin: EdgeInsets.only(bottom: 20),
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.black26 : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 8,
+                  color: Colors.black12,
+                )
+              ],
+            ),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // IMAGE
@@ -263,39 +269,124 @@ StreamBuilder<QuerySnapshot>(
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // DETAILS ROW
-Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    Text("🕒 ${data['duration']}",
-        style: TextStyle(color: subTextColor)
-    ),
+              // DETAILS SECTION - Better organized layout
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    // First Row: Duration and Date
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 18,
+                                color: isDarkMode ? Color(0xFFDF50B7) : Color(0xFFDF50B7),
+                              ),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  data['duration'] ?? 'N/A',
+                                  style: TextStyle(
+                                    color: subTextColor,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 18,
+                                color: isDarkMode ? Color(0xFFDF50B7) : Color(0xFFDF50B7),
+                              ),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  data['date'] ?? 'No Date',
+                                  style: TextStyle(
+                                    color: subTextColor,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Second Row: Trainer and Price
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.person,
+                                size: 18,
+                                color: isDarkMode ? Color(0xFFDF50B7) : Color(0xFFDF50B7),
+                              ),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  data['mentor'] ?? 'N/A',
+                                  style: TextStyle(
+                                    color: subTextColor,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDarkMode 
+                                ? Color(0xFFDF50B7).withOpacity(0.2) 
+                                : Color(0xFFFDE7F4),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            "AED ${data['price'] ?? '0'}",
+                            style: TextStyle(
+                              color: headlineColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
 
-    Text("📅 ${data.toString().contains('date') ? data['date'] : 'No Date'}",
-  style: TextStyle(color: subTextColor),
-),
+              const SizedBox(height: 12),
 
-
-    Text("👤 ${data['mentor']}",
-        style: TextStyle(color: subTextColor)
-    ),
-
-    Text("AED ${data['price']}",
-        style: TextStyle(color: headlineColor)
-    ),
-  ],
-),
-
-
-
-
-              const SizedBox(height: 10),
-
-              // DESCRIPTION
+              // DESCRIPTION - Limited to one line with ellipsis
               Text(
-                data['description'],
+                data['description'] ?? '',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 15,
                   color: subTextColor,
@@ -412,7 +503,8 @@ FutureBuilder<bool>(
 
             ],
           ),
-        );
+        ),
+      );
       }).toList(),
     );
   },
