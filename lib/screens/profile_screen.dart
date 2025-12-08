@@ -40,6 +40,7 @@ String selectedCountryCode = "+971";
 
 bool phoneValid = true;
 String fullPhone = "";
+int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
 
 
   @override
@@ -316,14 +317,23 @@ Future<void> loadProfile() async {
     }
   }
 
+  String _getImageUrlWithCacheBuster(String url) {
+    if (url.isEmpty) return url;
+    try {
+      final uri = Uri.parse(url);
+      final separator = uri.queryParameters.isEmpty ? '?' : '&';
+      return '$url${separator}cache=${_profileImageCacheKey}';
+    } catch (e) {
+      // If URL parsing fails, append cache parameter directly
+      final separator = url.contains('?') ? '&' : '?';
+      return '$url${separator}cache=${_profileImageCacheKey}';
+    }
+  }
+
   Future<void> updateSection(Map<String, dynamic> updates) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-  "profileImage": profileImageUrl.text,
-});
-
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(
             content: const Text("Profile updated"),
@@ -332,6 +342,118 @@ Future<void> loadProfile() async {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
     }
+  }
+
+  void _showProfileImageEditDialog(BuildContext context) {
+    final isDark = _isDarkMode;
+    final Color dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final Color titleColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color textColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+    final Color fieldBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+    final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color focusColor = const Color(0xFF21B998);
+
+    final imageUrlController = TextEditingController(text: profileImageUrl.text);
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: borderColor,
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Edit Profile Image",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: titleColor,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: imageUrlController,
+                  style: TextStyle(color: textColor, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: "Profile Image URL",
+                    prefixIcon: Icon(Icons.image, color: focusColor),
+                    filled: true,
+                    fillColor: fieldBg,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: borderColor, width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: borderColor, width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: focusColor, width: 2),
+                    ),
+                    labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: textColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: const Text("Cancel"),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final newUrl = imageUrlController.text.trim();
+                        profileImageUrl.text = newUrl;
+                        await updateSection({
+                          "profileImage": newUrl,
+                        });
+                        if (mounted) {
+                          setState(() {
+                            _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
+                          });
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: focusColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: const Text("Save Changes"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void showEditDialog({
@@ -755,28 +877,104 @@ Widget buildPhoneField() {
                 ),
                 child: Row(
                   children: [
-Container(
-  width: 80,
-  height: 80,
-  decoration: BoxDecoration(
-    shape: BoxShape.circle,
-    border: Border.all(
-      color: isDark ? Color(0xFF1E293B) : Colors.white,
-      width: 4,
-    ),
-  ),
-  child: ClipOval(
-    child: profileImageUrl.text.isEmpty
-        ? Icon(Icons.person, size: 40, color: Colors.white)
-        : Image.network(
-            profileImageUrl.text,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(Icons.error, color: Colors.red);
-            },
-          ),
-  ),
-),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [const Color(0xFF21B998), const Color(0xFF0097B2)],
+                            ),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              width: 4,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF21B998).withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: profileImageUrl.text.isEmpty
+                                ? Icon(Icons.person, size: 40, color: Colors.white)
+                                : Image.network(
+                                    _getImageUrlWithCacheBuster(profileImageUrl.text),
+                                    key: ValueKey('${profileImageUrl.text}_$_profileImageCacheKey'),
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 160,
+                                    cacheHeight: 160,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [const Color(0xFF21B998), const Color(0xFF0097B2)],
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                : null,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [const Color(0xFF21B998), const Color(0xFF0097B2)],
+                                          ),
+                                        ),
+                                        child: Icon(Icons.person, size: 40, color: Colors.white),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                        // Pencil edit button at bottom right
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () => _showProfileImageEditDialog(context),
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF21B998),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
 
                     const SizedBox(width: 20),
                     Expanded(

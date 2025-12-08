@@ -2,6 +2,7 @@ import 'package:Outbox/widgets/membership_carousel.dart';
 import 'package:Outbox/widgets/todays_classes_list.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 //import 'package:khyate_b2b/widgets/membership_carousel.dart';
 import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/todays_classes_component.dart';
@@ -73,9 +74,23 @@ class _FitnessScreenState extends State<FitnessScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color scaffoldBackground = widget.isDarkMode ? const Color(0xFF1A2332) : const Color(0xFFFCEEE5);
-    final Color headlineColor = widget.isDarkMode ? const Color(0xFFC5A572) : const Color(0xFF1A2332);
-    final Color subTextColor = widget.isDarkMode ? Colors.white70 : Colors.black54;
+    // Brand Colors - Fitness (Teal: #21C8B1)
+    final Color scaffoldBackground = widget.isDarkMode ? const Color(0xFF353535) : const Color(0xFFFCEEE5);
+    final Color headlineColor = widget.isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF353535);
+    final Color subTextColor = widget.isDarkMode ? const Color(0xFF99928D) : const Color(0xFF99928D);
+    final Color accentColor = const Color(0xFF21C8B1); // Teal for Fitness
+    
+    // Brand Fonts
+    final TextStyle headlineStyle = GoogleFonts.montserrat(
+      fontSize: 38,
+      fontWeight: FontWeight.bold,
+      color: headlineColor,
+    );
+    final TextStyle bodyStyle = GoogleFonts.inter(
+      fontSize: 18,
+      fontWeight: FontWeight.w400,
+      color: subTextColor,
+    );
 
     final sessions = [
       FitnessSession(
@@ -132,13 +147,13 @@ class _FitnessScreenState extends State<FitnessScreen> {
             const SizedBox(height: 56),
             Text(
               "Discover the best in fitness & wellness",
-              style: TextStyle(color: headlineColor, fontSize: 38, fontWeight: FontWeight.bold),
+              style: headlineStyle,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
             Text(
               "Your next workout, wellness class, or live session is just a click away",
-              style: TextStyle(color: subTextColor, fontSize: 18),
+              style: bodyStyle,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 36),
@@ -161,15 +176,19 @@ class _FitnessScreenState extends State<FitnessScreen> {
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             hintText: "Search by name",
-                            hintStyle: TextStyle(color: widget.isDarkMode ? Colors.white54 : Colors.grey),
+                            hintStyle: GoogleFonts.inter(
+                              color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                            ),
                           ),
-                          style: TextStyle(color: widget.isDarkMode ? Colors.white : Colors.black87),
+                          style: GoogleFonts.inter(
+                            color: widget.isDarkMode ? Colors.white : const Color(0xFF353535),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () => setState(() {}),
-                        icon: const Icon(Icons.search, color: Colors.red),
+                        icon: Icon(Icons.search, color: accentColor),
                       ),
                     ],
                   ),
@@ -182,13 +201,19 @@ class _FitnessScreenState extends State<FitnessScreen> {
                           builder: (context, snapshot) {
                             final trainers = snapshot.data ?? [];
                             return DropdownButton<String>(
-                              hint: const Text("Select Trainer"),
+                              hint: Text(
+                                "Select Trainer",
+                                style: GoogleFonts.inter(),
+                              ),
                               value: selectedTrainer,
                               isExpanded: true,
                               items: trainers
                                   .map((trainer) => DropdownMenuItem(
                                         value: trainer,
-                                        child: Text(trainer),
+                                        child: Text(
+                                          trainer,
+                                          style: GoogleFonts.inter(),
+                                        ),
                                       ))
                                   .toList(),
                               onChanged: (value) {
@@ -203,7 +228,10 @@ class _FitnessScreenState extends State<FitnessScreen> {
                         value: filterFutureDate,
                         onChanged: (value) => setState(() => filterFutureDate = value!),
                       ),
-                      const Text("Future Dates"),
+                      Text(
+                        "Future Dates",
+                        style: GoogleFonts.inter(),
+                      ),
                     ],
                   ),
                 ],
@@ -215,14 +243,17 @@ class _FitnessScreenState extends State<FitnessScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.apple, color: headlineColor),
-                const SizedBox(width: 8),
-                Icon(Icons.android, color: headlineColor),
-                const SizedBox(width: 16),
-                Text(
-                  "Get the app today",
-                  style: TextStyle(color: headlineColor),
-                ),
+                      Icon(Icons.apple, color: headlineColor),
+                      const SizedBox(width: 8),
+                      Icon(Icons.android, color: headlineColor),
+                      const SizedBox(width: 16),
+                      Text(
+                        "Get the app today",
+                        style: GoogleFonts.inter(
+                          color: headlineColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
               ],
             ),
 
@@ -240,7 +271,11 @@ const SizedBox(height: 92),
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
                   'Top Membership',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 32, color: headlineColor),
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    color: headlineColor,
+                  ),
                 ),
               ),
             ),
@@ -253,7 +288,12 @@ const SizedBox(height: 92),
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No memberships available"));
+                  return Center(
+                    child: Text(
+                      "No memberships available",
+                      style: GoogleFonts.inter(color: subTextColor),
+                    ),
+                  );
                 }
 
                 final allMemberships = snapshot.data!;
