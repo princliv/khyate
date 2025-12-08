@@ -467,3 +467,4 @@ class TodaysClassModal extends StatelessWidget {
   }
 }
 
+

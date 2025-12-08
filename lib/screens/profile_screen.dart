@@ -549,23 +549,40 @@ Widget buildPhoneField() {
       appBar: AppBar(
         backgroundColor: barColor,
         elevation: 0,
-        leadingWidth: 200,
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-          child: SizedBox(
-            height: 35,
-            width: 140,
-            child: Image.asset(
-              'assets/company.png',
-              fit: BoxFit.contain,
-              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                if (wasSynchronouslyLoaded) return child;
-                return frame != null ? child : const SizedBox();
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.image, color: Colors.white, size: 35);
-              },
-            ),
+        leadingWidth: Navigator.of(context).canPop() ? 64 : 200,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                child: SizedBox(
+                  height: 35,
+                  width: 140,
+                  child: Image.asset(
+                    'assets/company.png',
+                    fit: BoxFit.contain,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                      if (wasSynchronouslyLoaded) return child;
+                      return frame != null ? child : const SizedBox();
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.image,
+                          color: Colors.white, size: 35);
+                    },
+                  ),
+                ),
+              ),
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
         actions: [

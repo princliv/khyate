@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 
 class ComingSoonScreen extends StatelessWidget {
   final bool isDarkMode;
+  final bool isAdmin;
+  final VoidCallback onLogout;
+  final VoidCallback onToggleTheme;
+  final VoidCallback onShowAdminOptions;
+  final VoidCallback onOpenProfile;
 
-  const ComingSoonScreen({super.key, required this.isDarkMode});
+  const ComingSoonScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.isAdmin,
+    required this.onLogout,
+    required this.onToggleTheme,
+    required this.onShowAdminOptions,
+    required this.onOpenProfile,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +45,33 @@ class ComingSoonScreen extends StatelessWidget {
           ),
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person, color: Colors.white),
+            tooltip: 'Profile',
+            onPressed: () {
+              if (isAdmin) {
+                onShowAdminOptions();
+              } else {
+                onOpenProfile();
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Logout',
+            onPressed: onLogout,
+          ),
+          IconButton(
+            icon: Icon(
+              isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+              color: Colors.white,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: onToggleTheme,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Center(
         child: Padding(

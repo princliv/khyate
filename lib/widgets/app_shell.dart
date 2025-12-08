@@ -1,8 +1,10 @@
 import 'package:Outbox/screens/admin_dashboard.dart';
 import 'package:Outbox/screens/profile_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
 // import 'package:khyate_b2b/screens/admin_dashboard.dart';
 // import 'package:khyate_b2b/screens/profile_screen.dart';
 // import 'dashboard_screen.dart'; // ← Create this screen
@@ -46,6 +48,28 @@ class AppShell extends StatefulWidget {
     final state = context.findAncestorStateOfType<_AppShellState>();
     state?.navigateToTab(index);
   }
+
+  // Accessors for shared actions/state from descendants
+  static _AppShellState? _maybeOf(BuildContext context) =>
+      context.findAncestorStateOfType<_AppShellState>();
+
+  static bool isAdmin(BuildContext context) =>
+      _maybeOf(context)?._isAdmin ?? false;
+
+  static bool isDarkMode(BuildContext context) =>
+      _maybeOf(context)?._isDarkMode ?? false;
+
+  static void showLogoutDialog(BuildContext context) =>
+      _maybeOf(context)?._showLogoutConfirmation(context);
+
+  static void toggleTheme(BuildContext context) =>
+      _maybeOf(context)?._onToggleTheme();
+
+  static void openProfileOrAdmin(BuildContext context) =>
+      _maybeOf(context)?._onProfilePressed();
+
+  static void showAdminOptions(BuildContext context) =>
+      _maybeOf(context)?._showAdminOptions();
 }
 
 class _AppShellState extends State<AppShell> {
@@ -230,6 +254,19 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _onProfilePressed() {
+    if (_isAdmin) {
+      _showAdminOptions();
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProfileScreen(isDarkMode: _isDarkMode),
+        ),
+      );
+    }
+  }
+
   void _onNavTapped(int index) {
     if (_hasNavSelection && index == _selectedIndex) return;
     setState(() {
@@ -247,6 +284,7 @@ class _AppShellState extends State<AppShell> {
     final Color scaffoldBackground =
         _isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFFEFCF8);
     final bool showSelection = _hasNavSelection;
+    final int cartCount = context.watch<CartProvider>().items.length;
 
     final Widget displayedPage = showSelection
         ? widget.pages[_selectedIndex].builder(context, _isDarkMode)
@@ -259,6 +297,11 @@ class _AppShellState extends State<AppShell> {
       child: displayedPage,
     );
 
+    final bool canPop = Navigator.of(context).canPop();
+    final bool showBackToLanding = showSelection && !canPop;
+    final String? appBarTitle =
+        showSelection ? widget.pages[_selectedIndex].label : null;
+
     return Scaffold(
       key: ValueKey(
         '${showSelection ? 'page_$_selectedIndex' : 'landing'}_${_isDarkMode ? 'dark' : 'light'}',
@@ -267,44 +310,60 @@ class _AppShellState extends State<AppShell> {
       appBar: AppBar(
         backgroundColor: _barColor,
         elevation: 0,
-        leadingWidth: 200,
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-          child: SizedBox(
-            height: 35,
-            width: 140,
-            child: Image.asset(
-              'assets/company.png',
-              fit: BoxFit.contain,
-              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                if (wasSynchronouslyLoaded) return child;
-                return frame != null ? child : const SizedBox();
-              },
-              errorBuilder: (context, error, stackTrace) {
-                debugPrint('Error loading company.png: $error');
-                return const Icon(Icons.image, color: Colors.white, size: 35);
-              },
-            ),
-          ),
-        ),
+        leadingWidth: (canPop || showBackToLanding) ? 64 : 200,
+        leading: (canPop || showBackToLanding)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                tooltip: 'Back',
+                onPressed: () {
+                  if (canPop) {
+                    Navigator.of(context).maybePop();
+                  } else if (showBackToLanding) {
+                    setState(() {
+                      _hasNavSelection = false;
+                    });
+                  }
+                },
+              )
+            : Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                child: SizedBox(
+                  height: 35,
+                  width: 140,
+                  child: Image.asset(
+                    'assets/company.png',
+                    fit: BoxFit.contain,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                      if (wasSynchronouslyLoaded) return child;
+                      return frame != null ? child : const SizedBox();
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('Error loading company.png: $error');
+                      return const Icon(Icons.image,
+                          color: Colors.white, size: 35);
+                    },
+                  ),
+                ),
+              ),
+        title: appBarTitle != null
+            ? Text(
+                appBarTitle,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              )
+            : null,
+        centerTitle: false,
         actions: [
           // 🔥 Profile button with admin logic
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             tooltip: 'Profile',
-            onPressed: () {
-              if (_isAdmin) {
-                _showAdminOptions(); // 🔥 admin dialog
-              } else {
-                // Normal user → go directly to profile
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileScreen(isDarkMode: _isDarkMode),
-                  ),
-                );
-              }
-            },
+            onPressed: _onProfilePressed,
           ),
 
           IconButton(
@@ -341,14 +400,47 @@ class _AppShellState extends State<AppShell> {
         showUnselectedLabels: true,
         currentIndex: _selectedIndex,
         onTap: _onNavTapped,
-        items: widget.pages
-            .map(
-              (page) => BottomNavigationBarItem(
-                icon: Icon(page.icon),
-                label: page.label,
-              ),
-            )
-            .toList(),
+        items: widget.pages.map((page) {
+          final bool isCart = page.label.toLowerCase() == 'cart';
+          final Widget icon = isCart && cartCount > 0
+              ? Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(page.icon),
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$cartCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Icon(page.icon);
+
+          return BottomNavigationBarItem(
+            icon: icon,
+            label: page.label,
+          );
+        }).toList(),
       ),
     );
   }

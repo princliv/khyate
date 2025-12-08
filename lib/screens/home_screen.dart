@@ -189,9 +189,20 @@ class _HomeLanding extends StatelessWidget {
                       Color(0xFFA855F7),
                     ],
                     onTap: () {
+                      final bool isAdmin = AppShell.isAdmin(context);
+                      final bool darkMode = AppShell.isDarkMode(context);
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ComingSoonScreen(isDarkMode: isDarkMode),
+                          builder: (_) => ComingSoonScreen(
+                            isDarkMode: darkMode,
+                            isAdmin: isAdmin,
+                            onLogout: () => AppShell.showLogoutDialog(context),
+                            onToggleTheme: () => AppShell.toggleTheme(context),
+                            onShowAdminOptions: () =>
+                                AppShell.showAdminOptions(context),
+                            onOpenProfile: () =>
+                                AppShell.openProfileOrAdmin(context),
+                          ),
                         ),
                       );
                     },
