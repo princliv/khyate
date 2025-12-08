@@ -50,9 +50,8 @@ class _LoginScreenState extends State<LoginScreen>
       switch (error.code) {
         case 'wrong-password':
         case 'invalid-credential':
-          return 'Incorrect password';
         case 'user-not-found':
-          return 'No account found with this email';
+          return 'Invalid Email or Password';
         case 'user-disabled':
           return 'This account has been disabled';
         case 'too-many-requests':

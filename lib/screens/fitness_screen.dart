@@ -7,6 +7,7 @@ import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/todays_classes_component.dart';
 import '../widgets/membership_card.dart';
 import '../widgets/fitness_session_modal.dart';
+import '../widgets/membership_modal.dart';
 import '../models/membership_card_model.dart';
 import '../services/notification_service.dart';
 
@@ -228,7 +229,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
             const SizedBox(height: 28),
             FitnessSessionsGrid(sessions: sessions, isDarkMode: widget.isDarkMode),
 const SizedBox(height: 28),
-const TodaysClassesList(),
+TodaysClassesList(isDarkMode: widget.isDarkMode),
 const SizedBox(height: 92),
 
 
@@ -267,7 +268,9 @@ const SizedBox(height: 92),
                         .map(
                           (card) => MembershipCard(
                             data: card,
-                            onTap: () {},
+                            onTap: () {
+                              MembershipModal.show(context, card, widget.isDarkMode);
+                            },
                           ),
                         )
                         .toList(),

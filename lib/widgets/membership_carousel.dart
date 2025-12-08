@@ -3,6 +3,7 @@ import 'package:Outbox/models/membership_model.dart';
 import 'package:Outbox/providers/cart_provider.dart';
 import 'package:Outbox/services/purchase_status_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
+import 'package:Outbox/widgets/membership_carousel_modal.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -103,22 +104,45 @@ class MembershipCarousel extends StatelessWidget {
           ),
           child: Column(
             children: [
-              /// IMAGE
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                child: card.imageUrl.isNotEmpty
-                    ? Image.network(
-                        card.imageUrl,
-                        height: 120,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.asset(
-                        'assets/default_thumbnail.webp',
-                        height: 120,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+              /// IMAGE with TAG
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                    child: card.imageUrl.isNotEmpty
+                        ? Image.network(
+                            card.imageUrl,
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.asset(
+                            'assets/default_thumbnail.webp',
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                  // Tag positioned at top right corner
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      child: Text(
+                        card.tag,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               /// DETAILS
@@ -128,39 +152,6 @@ class MembershipCarousel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  /// TAG + CLASSES
-                  Row(
-                    children: [
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1F1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(card.tag),
-                      ),
-                      const Spacer(),
-Flexible(
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: Color(0xFFF1F1F1),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Text(
-      card.tag,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      softWrap: false,
-    ),
-  ),
-),
-
-
-                    ],
-                  ),
-
                   const SizedBox(height: 10),
 
                   Text(
@@ -190,72 +181,123 @@ Flexible(
 
                   const SizedBox(height: 12),
 
-                  /// TRAINER NAME
-                  if (card.mentor.isNotEmpty) ...[
-                    Row(
-                      children: [
-                        const Icon(Icons.person,
-                            color: Colors.blueGrey, size: 18),
-                        const SizedBox(width: 6),
-                        Text(
-                          "Trainer: ${card.mentor}",
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  /// DATE
-                  if (card.date.isNotEmpty) ...[
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_today,
-                            size: 16, color: Colors.pinkAccent),
-                        const SizedBox(width: 6),
-                        Text(
-                          "Date: ${card.date}",
-                          style: const TextStyle(
-                              fontSize: 14, color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  /// LOCATION
-if (card.location.isNotEmpty) ...[
-  Row(
-    children: [
-      const Icon(Icons.location_on,
-          size: 16, color: Colors.redAccent),
-      const SizedBox(width: 6),
-      Text(
-        "Location: ${card.location}",
-        style: const TextStyle(
-            fontSize: 14, color: Colors.black87),
-      ),
-    ],
-  ),
-  const SizedBox(height: 12),
-],
-
-
-                      /// FEATURES LIST
-                      Expanded(
-                        child: ListView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          children: card.features.map(
-                            (f) => Row(
+                  /// DETAILS SECTION - Better organized layout
+                  if (card.mentor.isNotEmpty || card.date.isNotEmpty || card.location.isNotEmpty) ...[
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          // First Row: Date and Location (if available)
+                          if (card.date.isNotEmpty || card.location.isNotEmpty)
+                            Row(
                               children: [
-                                const Icon(Icons.check,
-                                    color: Color(0xFF16AE8E), size: 18),
-                                const SizedBox(width: 5),
-                                Expanded(child: Text(f)),
+                                if (card.date.isNotEmpty)
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.calendar_today,
+                                          size: 16,
+                                          color: Color(0xFFDF50B7),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            card.date,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.black87,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (card.date.isNotEmpty && card.location.isNotEmpty)
+                                  const SizedBox(width: 12),
+                                if (card.location.isNotEmpty)
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.location_on,
+                                          size: 16,
+                                          color: Color(0xFFDF50B7),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            card.location,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.black87,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
-                          ).toList(),
+                          if ((card.date.isNotEmpty || card.location.isNotEmpty) && card.mentor.isNotEmpty)
+                            const SizedBox(height: 10),
+                          // Second Row: Trainer
+                          if (card.mentor.isNotEmpty)
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Color(0xFFDF50B7),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    card.mentor,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                      const Spacer(),
+
+                      // Know More Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            MembershipCarouselModal.show(context, card);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A73E8),
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text("Know More"),
                         ),
                       ),
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:Outbox/widgets/todays_class_modal.dart';
 
-/// Model for Today’s Classes
+/// Model for Today's Classes
 class TodayClassData {
   final String id;
   final String title;
@@ -12,6 +13,7 @@ class TodayClassData {
   final String imageUrl;
   final String? description;       // optional
   final List<String>? features;    // optional
+  final String? price;             // optional
 
   TodayClassData({
     required this.id,
@@ -23,6 +25,7 @@ class TodayClassData {
     required this.imageUrl,
     this.description,
     this.features,
+    this.price,
   });
 
   factory TodayClassData.fromFirestore(Map<String, dynamic> data, String id) {
@@ -38,6 +41,7 @@ class TodayClassData {
       features: data["features"] != null
           ? List<String>.from(data["features"])
           : null,
+      price: data["price"],                      // may be null
     );
   }
 }
@@ -92,9 +96,11 @@ final todayStr = "${today.day}-${today.month}-${today.year}"; // matches Firesto
   return results;
 }
 
-/// Widget for displaying Today’s Classes horizontally
+/// Widget for displaying Today's Classes horizontally
 class TodaysClassesList extends StatelessWidget {
-  const TodaysClassesList({super.key});
+  final bool isDarkMode;
+  
+  const TodaysClassesList({super.key, this.isDarkMode = false});
 
   @override
   Widget build(BuildContext context) {
@@ -119,16 +125,17 @@ class TodaysClassesList extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Today's Classes",
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
+                color: isDarkMode ? const Color(0xFFC5A572) : const Color(0xFF1A2332),
               ),
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 360,
+              height: 320,
               child: Stack(
                 children: [
                   ListView.builder(
@@ -137,7 +144,7 @@ class TodaysClassesList extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 40), // space for arrow
                     itemBuilder: (ctx, i) {
                       final c = classes[i];
-                      return _buildTodayCard(c);
+                      return _buildTodayCard(ctx, c, isDarkMode);
                     },
                   ),
                   Positioned(
@@ -169,104 +176,143 @@ class TodaysClassesList extends StatelessWidget {
     );
   }
 
-Widget _buildTodayCard(TodayClassData c) {
-  return Container(
-    width: 260,
-    margin: const EdgeInsets.only(right: 14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      boxShadow: const [
-        BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 3)),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: SingleChildScrollView( // allows scrolling if text is long
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (c.imageUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  c.imageUrl,
-                  height: 100,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+Widget _buildTodayCard(BuildContext context, TodayClassData c, bool isDarkMode) {
+  return InkWell(
+    onTap: () {
+      TodaysClassModal.show(context, c, isDarkMode: isDarkMode);
+    },
+    borderRadius: BorderRadius.circular(18),
+    child: Container(
+      width: 260,
+      margin: const EdgeInsets.only(right: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // IMAGE - Always show, with default fallback
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            child: c.imageUrl.isNotEmpty
+                ? Image.network(
+                    c.imageUrl,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/default_thumbnail.webp',
+                        height: 140,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  )
+                : Image.asset(
+                    'assets/default_thumbnail.webp',
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+          ),
+          
+          // CONTENT SECTION
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // TITLE
+                Text(
+                  c.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            const SizedBox(height: 6),
-            Text(c.title,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            if (c.description != null && c.description!.isNotEmpty) ...[
-              Text(
-                c.description!,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-            ],
-            if (c.features != null && c.features!.isNotEmpty) ...[
-              const Text(
-                "Features:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              ...c.features!.map((f) => Row(
+                const SizedBox(height: 12),
+                
+                // DETAILS SECTION - Well organized
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200, width: 0.5),
+                  ),
+                  child: Column(
                     children: [
-                      const Icon(Icons.check, size: 14, color: Colors.green),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          f,
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                      // Trainer
+                      Row(
+                        children: [
+                          const Icon(Icons.person, size: 18, color: Color(0xFFDF50B7)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              c.mentor,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
+                      // Location
+                      if (c.location.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 18, color: Color(0xFFDF50B7)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                c.location,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      // Date - Right aligned
+                      if (c.date.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            c.date,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  )),
-              const SizedBox(height: 6),
-            ],
-            Row(
-              children: [
-                const Icon(Icons.person, size: 16, color: Colors.pinkAccent),
-                const SizedBox(width: 6),
-                Text(c.mentor),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 16, color: Colors.blue),
-                const SizedBox(width: 6),
-                Text(c.time),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    c.location,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            if (c.date.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                c.date,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     ),
   );

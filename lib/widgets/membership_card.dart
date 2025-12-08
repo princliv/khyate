@@ -110,48 +110,122 @@ class MembershipCard extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
 
-                  // TIME + DATE ROW
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, color: Color(0xFFDF50B7), size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        data.time,
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                      SizedBox(width: 12),
-                      Icon(Icons.calendar_today, color: Color(0xFFDF50B7), size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        data.date,
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-
-                  // LOCATION + TRAINER ROW
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, color: Color(0xFFDF50B7), size: 14),
-                      SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          data.location,
-                          style: TextStyle(color: Colors.black54, fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
+                  // DETAILS SECTION - Better organized layout
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        // First Row: Time and Date
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: Color(0xFFDF50B7),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      data.time,
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Color(0xFFDF50B7),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      data.date,
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        data.mentor,
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                    ],
+                        SizedBox(height: 10),
+                        // Second Row: Location and Trainer
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: Color(0xFFDF50B7),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      data.location,
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: Color(0xFFDF50B7),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      data.mentor,
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 6),
 
                   // REVIEWS
                   Row(
