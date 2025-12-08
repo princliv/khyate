@@ -1,3 +1,4 @@
+import 'package:Outbox/services/review_service.dart';
 import 'package:flutter/material.dart';
 import 'package:Outbox/models/membership_model.dart';
 
@@ -239,6 +240,62 @@ class MembershipCarouselModal extends StatelessWidget {
                             ],
                           ),
                         ),
+                        FutureBuilder<Map<String, dynamic>?>(
+  future: ReviewService.getUserReview(data.id),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return SizedBox(); // loading or no review
+    }
+
+    final userReview = snapshot.data;
+    if (userReview == null) {
+      return SizedBox(); // user never reviewed
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        const Text(
+          "Your Review",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1A2332),
+          ),
+        ),
+
+        SizedBox(height: 8),
+
+        // Rating
+        Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            SizedBox(width: 6),
+            Text(
+              userReview['rating'].toString(),
+              style: const TextStyle(color: Colors.black54, fontSize: 15),
+            ),
+          ],
+        ),
+
+        SizedBox(height: 6),
+
+        // Comment
+        Text(
+          userReview['comment'] ?? "",
+          style: const TextStyle(
+            fontSize: 15,
+            color: Colors.black87,
+          ),
+        ),
+
+        SizedBox(height: 20),
+      ],
+    );
+  },
+),
+
                       const SizedBox(height: 20),
                     ],
                   ),

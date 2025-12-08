@@ -37,4 +37,17 @@ class ReviewService {
       return total / snapshot.docs.length;
     });
   }
+  static Future<Map<String, dynamic>?> getUserReview(String cardId) async {
+  final uid = FirebaseAuth.instance.currentUser!.uid;
+
+  final doc = await FirebaseFirestore.instance
+      .collection("reviews")
+      .doc(cardId)
+      .collection("userReviews")
+      .doc(uid)
+      .get();
+
+  return doc.exists ? doc.data() : null;
+}
+
 }
