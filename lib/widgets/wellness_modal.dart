@@ -1,3 +1,4 @@
+import 'package:Outbox/services/review_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:Outbox/models/cart_model.dart';
@@ -270,6 +271,62 @@ class WellnessModal extends StatelessWidget {
                           color: textColor,
                         ),
                       ),
+                      FutureBuilder<Map<String, dynamic>?>(
+  future: ReviewService.getUserReview(documentId),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) return SizedBox();
+
+    final userReview = snapshot.data;
+    if (userReview == null) return SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(
+          "Your Review",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: titleColor,
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // ⭐ Rating
+        Row(
+          children: [
+            Icon(Icons.star, color: Colors.amber),
+            const SizedBox(width: 6),
+            Text(
+              userReview['rating'].toString(),
+              style: TextStyle(
+                fontSize: 16,
+                color: subTextColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // 💬 Comment
+        Text(
+          userReview['comment'] ?? "",
+          style: TextStyle(
+            fontSize: 15,
+            height: 1.4,
+            color: textColor,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+      ],
+    );
+  },
+),
+
+                      
                       const SizedBox(height: 20),
                     ],
                   ),
