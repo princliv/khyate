@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -158,6 +160,123 @@ class CartScreen extends StatelessWidget {
                     },
                   ),
                 ),
+                // -----------------------------
+// PURCHASE HISTORY SECTION
+// -----------------------------
+FutureBuilder<String>(
+  future: Future.value(FirebaseAuth.instance.currentUser?.uid),
+  builder: (context, uidSnapshot) {
+    if (!uidSnapshot.hasData) return SizedBox();
+
+    final uid = uidSnapshot.data!;
+    final purchasesRef = FirebaseFirestore.instance
+        .collection("users")
+        .doc(uid)
+        .collection("purchases")
+        .orderBy("purchasedAt", descending: true);
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: purchasesRef.snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return SizedBox();
+
+        final purchases = snapshot.data!.docs;
+
+        if (purchases.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              "No previous purchases",
+              style: TextStyle(color: textColor.withOpacity(0.6)),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Text(
+                "Purchase History",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ),
+
+            SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: purchases.length,
+                itemBuilder: (context, index) {
+                  final item = purchases[index].data() as Map<String, dynamic>;
+
+                  return Container(
+                    width: 160,
+                    margin: const EdgeInsets.only(left: 16, bottom: 20),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? Color(0xFF1A2332)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Thumbnail
+                        ClipRRect(
+                          borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16)),
+                          child: Image.network(
+                            item["imageUrl"],
+                            height: 100,
+                            width: 160,
+                            fit: BoxFit.cover,
+                            errorBuilder: (c, e, s) => Icon(Icons.error),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            item["title"] ?? "",
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text(
+                            "AED ${item["price"]}",
+                            style: TextStyle(
+                              color: Colors.greenAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  },
+),
+
 
                 // Total Section
                 Container(
