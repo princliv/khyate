@@ -184,6 +184,27 @@ class _SignupScreenState extends State<SignupScreen>
     }
   }
 
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
+  Future<bool> _checkPhoneDuplicate(String phone) async {
+    try {
+      final normalized = _normalizePhone(phone);
+      if (normalized.isEmpty) return false;
+
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('phone', isEqualTo: normalized)
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -206,6 +227,19 @@ class _SignupScreenState extends State<SignupScreen>
         }
       }
 
+      // Check for duplicate phone
+      final normalizedPhone = _normalizePhone(phoneNumber);
+      if (normalizedPhone.isNotEmpty) {
+        final phoneExists = await _checkPhoneDuplicate(normalizedPhone);
+        if (phoneExists) {
+          setState(() {
+            message = 'This phone number is already registered';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
       final userCredential = await AuthService().signUp(
         emailController.text,
         passwordController.text,
@@ -214,6 +248,8 @@ class _SignupScreenState extends State<SignupScreen>
       if (uid != null) {
         // Store Emirates ID with hyphens removed for consistency
         final emiratesIdStored = emiratesId.replaceAll('-', '');
+        // Store phone in normalized form (digits only) for uniqueness
+        final phoneStored = normalizedPhone;
         
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': firstNameController.text,
@@ -225,7 +261,7 @@ class _SignupScreenState extends State<SignupScreen>
           'address': addressController.text,
           'country': selectedCountry != null ? selectedCountry!.name : '',
           'flagEmoji': selectedCountry != null ? selectedCountry!.flagEmoji : '',
-          'phone': phoneNumber,
+          'phone': phoneStored,
         });
         if (!mounted) return;
         Navigator.pushReplacement(

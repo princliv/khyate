@@ -1,5 +1,6 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -212,7 +213,84 @@ String fullPhone = "";
         }
       }
     }
+    // Normalize phone/country selections for UI
+    _hydratePhoneForUi();
+    _formatEmiratesIdForUi();
     setState(() => isLoading = false);
+  }
+
+  void _formatEmiratesIdForUi() {
+    final raw = emiratesId.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (raw.length == 15) {
+      emiratesId.text = _formatEmiratesId(raw);
+    }
+  }
+
+  String _formatEmiratesId(String digitsOnly) {
+    final buffer = StringBuffer();
+    for (int i = 0; i < digitsOnly.length; i++) {
+      if (i == 3 || i == 7 || i == 14) buffer.write('-');
+      buffer.write(digitsOnly[i]);
+    }
+    return buffer.toString();
+  }
+
+  String? _validateEmiratesId(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[-\s]'), '');
+    if (digitsOnly.length != 15) {
+      return 'Emirates ID must be 15 digits';
+    }
+    if (!digitsOnly.startsWith('784')) {
+      return 'Emirates ID must start with 784';
+    }
+    if (!RegExp(r'^\d{15}$').hasMatch(digitsOnly)) {
+      return 'Emirates ID can only contain digits';
+    }
+    final yearStr = digitsOnly.substring(3, 7);
+    final year = int.tryParse(yearStr);
+    if (year == null || year < 1900 || year > DateTime.now().year) {
+      return 'Invalid year in Emirates ID';
+    }
+    return null;
+  }
+
+  // Extract country code + local number (last 10 digits) for the phone field
+  void _hydratePhoneForUi() {
+    final storedPhone = phone.text.trim();
+    if (storedPhone.isEmpty) {
+      selectedCountryName = country.text.isNotEmpty ? country.text : selectedCountryName;
+      return;
+    }
+
+    final cleaned = storedPhone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleaned.length <= 10) {
+      phone.text = cleaned;
+      fullPhone = '${selectedCountryCode.replaceAll('+', '')}$cleaned';
+      selectedCountryName = country.text.isNotEmpty ? country.text : selectedCountryName;
+      return;
+    }
+
+    final String localNumber = cleaned.substring(cleaned.length - 10);
+    String codePart = cleaned.substring(0, cleaned.length - 10);
+    if (!codePart.startsWith('+')) {
+      codePart = '+$codePart';
+    }
+
+    phone.text = localNumber;
+    fullPhone = '$codePart$localNumber';
+    selectedCountryCode = codePart;
+    selectedCountryName = country.text.isNotEmpty ? country.text : selectedCountryName;
+  }
+
+  String _initialCountryIsoFromCode(String code) {
+    switch (code) {
+      case '+91':
+        return 'IN';
+      case '+971':
+        return 'AE';
+      default:
+        return 'AE';
+    }
   }
 
   Future<void> updateSection(Map<String, dynamic> updates) async {
@@ -494,18 +572,24 @@ Widget buildPhoneField() {
 
       IntlPhoneField(
         controller: phone,
-        initialCountryCode: 'AE',
+        initialCountryCode: _initialCountryIsoFromCode(selectedCountryCode),
         decoration: InputDecoration(
           hintText: "Enter phone number",
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-
         onChanged: (value) {
           setState(() {
             fullPhone = value.completeNumber;
             phoneValid = value.isValidNumber();
+            selectedCountryCode = '+${value.countryCode}';
+          });
+        },
+        onCountryChanged: (country) {
+          setState(() {
+            selectedCountryCode = '+${country.dialCode}';
+            selectedCountryName = country.name;
           });
         },
       ),
@@ -724,14 +808,28 @@ Widget buildPhoneField() {
                     fields: [
                       _buildDatePickerField(),
                       _buildGenderRadioButtons(),
-                      _buildTextField(emiratesId, "Emirates ID", Icons.badge),
+                      _buildEmiratesIdField(),
                     ],
                     onSave: () {
+                      final validation = _validateEmiratesId(emiratesId.text);
+                      if (validation != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(validation),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final digitsOnly = emiratesId.text.replaceAll('-', '');
+                      final formattedDisplay = _formatEmiratesId(digitsOnly);
                       updateSection({
                         "birthday": birthday.text,
                         "gender": gender.text,
-                        "emiratesId": emiratesId.text,
+                        "emiratesId": digitsOnly,
                       });
+                      emiratesId.text = formattedDisplay;
                       Navigator.pop(context);
                       setState(() {});
                     },
@@ -814,7 +912,7 @@ buildCard(
   children: [
     infoRow("Address", address.text, textColor, Icons.home, isDark),
     infoRow("Country", country.text, textColor, Icons.flag, isDark),
-    infoRow("Phone", phone.text, textColor, Icons.phone, isDark),
+    infoRow("Phone", fullPhone.isNotEmpty ? fullPhone : phone.text, textColor, Icons.phone, isDark),
   ],
 ),
 
@@ -841,6 +939,45 @@ buildCard(
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: focusColor),
+          filled: true,
+          fillColor: fieldBg,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: borderColor, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: borderColor, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: focusColor, width: 2),
+          ),
+          labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmiratesIdField() {
+    final isDark = _isDarkMode;
+    final Color fieldBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF1A2332);
+    final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+    final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+    final Color focusColor = const Color(0xFF21B998);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: emiratesId,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly, _EmiratesIdFormatter()],
+        keyboardType: TextInputType.number,
+        style: TextStyle(color: textColor, fontSize: 16),
+        decoration: InputDecoration(
+          labelText: "Emirates ID",
+          hintText: "784-XXXX-XXXXXXX-X",
+          prefixIcon: Icon(Icons.badge, color: focusColor),
           filled: true,
           fillColor: fieldBg,
           border: OutlineInputBorder(
@@ -1131,6 +1268,28 @@ Widget buildCountryPickerField(StateSetter setDialogState) {
           ),
         );
       },
+    );
+  }
+}
+
+class _EmiratesIdFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+    final limited = digitsOnly.length > 15 ? digitsOnly.substring(0, 15) : digitsOnly;
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < limited.length; i++) {
+      if (i == 3 || i == 7 || i == 14) buffer.write('-');
+      buffer.write(limited[i]);
+    }
+
+    return TextEditingValue(
+      text: buffer.toString(),
+      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }
