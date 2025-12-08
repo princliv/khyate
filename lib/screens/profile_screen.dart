@@ -40,6 +40,7 @@ String selectedCountryCode = "+971";
 
 bool phoneValid = true;
 String fullPhone = "";
+int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
 
 
   @override
@@ -316,6 +317,19 @@ Future<void> loadProfile() async {
     }
   }
 
+  String _getImageUrlWithCacheBuster(String url) {
+    if (url.isEmpty) return url;
+    try {
+      final uri = Uri.parse(url);
+      final separator = uri.queryParameters.isEmpty ? '?' : '&';
+      return '$url${separator}cache=${_profileImageCacheKey}';
+    } catch (e) {
+      // If URL parsing fails, append cache parameter directly
+      final separator = url.contains('?') ? '&' : '?';
+      return '$url${separator}cache=${_profileImageCacheKey}';
+    }
+  }
+
   Future<void> updateSection(Map<String, dynamic> updates) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
@@ -408,13 +422,18 @@ Future<void> loadProfile() async {
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton(
-                      onPressed: () {
-                        profileImageUrl.text = imageUrlController.text.trim();
-                        updateSection({
-                          "profileImage": profileImageUrl.text,
+                      onPressed: () async {
+                        final newUrl = imageUrlController.text.trim();
+                        profileImageUrl.text = newUrl;
+                        await updateSection({
+                          "profileImage": newUrl,
                         });
-                        Navigator.pop(context);
-                        setState(() {});
+                        if (mounted) {
+                          setState(() {
+                            _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
+                          });
+                          Navigator.pop(context);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: focusColor,
@@ -885,8 +904,30 @@ Widget buildPhoneField() {
                             child: profileImageUrl.text.isEmpty
                                 ? Icon(Icons.person, size: 40, color: Colors.white)
                                 : Image.network(
-                                    profileImageUrl.text,
+                                    _getImageUrlWithCacheBuster(profileImageUrl.text),
+                                    key: ValueKey('${profileImageUrl.text}_$_profileImageCacheKey'),
                                     fit: BoxFit.cover,
+                                    cacheWidth: 160,
+                                    cacheHeight: 160,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [const Color(0xFF21B998), const Color(0xFF0097B2)],
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                : null,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(
                                         decoration: BoxDecoration(

@@ -339,8 +339,10 @@ class MembershipCarousel extends StatelessWidget {
                           }
 
                           final purchased = snapshot.data!;
-                          final cartItems = Provider.of<CartProvider>(context).items;
-                          final isInCart = cartItems.any((item) => item.id == card.id);
+
+                          return Consumer<CartProvider>(
+                            builder: (context, cart, child) {
+                              final isInCart = cart.items.any((item) => item.id == card.id);
 
                           if (purchased) {
                             return Column(
@@ -416,8 +418,7 @@ class MembershipCarousel extends StatelessWidget {
                                   height: 32,
                                   child: TextButton(
                                     onPressed: () {
-                                      Provider.of<CartProvider>(context, listen: false)
-                                          .removeItem(card.id);
+                                      cart.removeItem(card.id);
                                     },
                                     child: const Text(
                                       "Remove",
@@ -449,8 +450,7 @@ class MembershipCarousel extends StatelessWidget {
                                 ),
                               ),
                               onPressed: () {
-                                Provider.of<CartProvider>(context, listen: false)
-                                    .addItem(
+                                cart.addItem(
                                   CartItem(
                                     id: card.id,
                                     title: card.title,
@@ -464,6 +464,8 @@ class MembershipCarousel extends StatelessWidget {
                               },
                               child: const Text("Add to Cart"),
                             ),
+                          );
+                            },
                           );
                         },
                       ),

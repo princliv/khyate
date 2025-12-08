@@ -5,6 +5,7 @@ import 'package:Outbox/services/review_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 // import 'package:khyate_b2b/models/cart_model.dart';
 // import 'package:khyate_b2b/providers/cart_provider.dart';
 // import 'package:khyate_b2b/services/purchase_status_service.dart';
@@ -43,14 +44,27 @@ class WellnessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Brand Colors - Wellness (Brown/Gold: #AD8654)
     final Color scaffoldBackground =
-        isDarkMode ? const Color(0xFF1A2332) : const Color(0xFFFCEEE5);
+        isDarkMode ? const Color(0xFF353535) : const Color(0xFFFCEEE5);
 
     final Color headlineColor =
-        isDarkMode ? const Color(0xFFC5A572) : const Color(0xFF1A2332);
+        isDarkMode ? const Color(0xFFAD8654) : const Color(0xFF353535);
 
-    final Color subTextColor =
-        isDarkMode ? Colors.white70 : Colors.black54;
+    final Color subTextColor = const Color(0xFF99928D);
+    final Color accentColor = const Color(0xFFAD8654); // Brown/Gold for Wellness
+    
+    // Brand Fonts
+    final TextStyle headlineStyle = GoogleFonts.montserrat(
+      fontSize: 38,
+      fontWeight: FontWeight.bold,
+      color: headlineColor,
+    );
+    final TextStyle bodyStyle = GoogleFonts.inter(
+      fontSize: 18,
+      fontWeight: FontWeight.w400,
+      color: subTextColor,
+    );
 
     /// --------------------------------------------------------
     /// WELLNESS SESSIONS (icons only top section)
@@ -146,11 +160,7 @@ class WellnessScreen extends StatelessWidget {
             /// TITLE
             Text(
               "Discover the best in wellness",
-              style: TextStyle(
-                color: headlineColor,
-                fontSize: 38,
-                fontWeight: FontWeight.bold,
-              ),
+              style: headlineStyle,
               textAlign: TextAlign.center,
             ),
 
@@ -158,10 +168,7 @@ class WellnessScreen extends StatelessWidget {
 
             Text(
               "Find peace, healing, creativity, and flow — curated for you.",
-              style: TextStyle(
-                color: subTextColor,
-                fontSize: 18,
-              ),
+              style: bodyStyle,
               textAlign: TextAlign.center,
             ),
 
@@ -184,7 +191,7 @@ Align(
   alignment: Alignment.centerLeft,
   child: Text(
     "Wellness Programs",
-    style: TextStyle(
+    style: GoogleFonts.montserrat(
       fontWeight: FontWeight.bold,
       fontSize: 24,
       color: headlineColor,
@@ -252,7 +259,7 @@ StreamBuilder<QuerySnapshot>(
               // TITLE
               Text(
                 data['title'],
-                style: TextStyle(
+                style: GoogleFonts.montserrat(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: headlineColor,
@@ -264,7 +271,7 @@ StreamBuilder<QuerySnapshot>(
               // SUBTITLE
               Text(
                 data['subtitle'],
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 16,
                   color: subTextColor,
                 ),
@@ -290,13 +297,13 @@ StreamBuilder<QuerySnapshot>(
                               Icon(
                                 Icons.access_time,
                                 size: 18,
-                                color: isDarkMode ? Color(0xFFDF50B7) : Color(0xFFDF50B7),
+                                color: accentColor,
                               ),
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   data['duration'] ?? 'N/A',
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     color: subTextColor,
                                     fontSize: 14,
                                   ),
@@ -313,13 +320,13 @@ StreamBuilder<QuerySnapshot>(
                               Icon(
                                 Icons.calendar_today,
                                 size: 18,
-                                color: isDarkMode ? Color(0xFFDF50B7) : Color(0xFFDF50B7),
+                                color: accentColor,
                               ),
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   data['date'] ?? 'No Date',
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     color: subTextColor,
                                     fontSize: 14,
                                   ),
@@ -341,13 +348,13 @@ StreamBuilder<QuerySnapshot>(
                               Icon(
                                 Icons.person,
                                 size: 18,
-                                color: isDarkMode ? Color(0xFFDF50B7) : Color(0xFFDF50B7),
+                                color: accentColor,
                               ),
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   data['mentor'] ?? 'N/A',
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     color: subTextColor,
                                     fontSize: 14,
                                   ),
@@ -362,13 +369,13 @@ StreamBuilder<QuerySnapshot>(
                           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: isDarkMode 
-                                ? Color(0xFFDF50B7).withOpacity(0.2) 
-                                : Color(0xFFFDE7F4),
+                                ? accentColor.withOpacity(0.2) 
+                                : accentColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             "AED ${data['price'] ?? '0'}",
-                            style: TextStyle(
+                            style: GoogleFonts.montserrat(
                               color: headlineColor,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -388,7 +395,7 @@ StreamBuilder<QuerySnapshot>(
                 data['description'] ?? '',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   color: subTextColor,
                 ),
@@ -413,7 +420,10 @@ StreamBuilder<QuerySnapshot>(
                           rating > 0
                               ? "Review: ${rating.toStringAsFixed(1)}"
                               : "0 review",
-                          style: TextStyle(color: subTextColor, fontSize: 13),
+                          style: GoogleFonts.inter(
+                            color: subTextColor,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     );
@@ -424,7 +434,10 @@ StreamBuilder<QuerySnapshot>(
                       const SizedBox(width: 4),
                       Text(
                         "0 review",
-                        style: TextStyle(color: subTextColor, fontSize: 13),
+                        style: GoogleFonts.inter(
+                          color: subTextColor,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   );
@@ -452,7 +465,10 @@ FutureBuilder<bool>(
         color: Colors.grey,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text("Purchased", style: TextStyle(color: Colors.white)),
+      child: Text(
+        "Purchased",
+        style: GoogleFonts.inter(color: Colors.white),
+      ),
     ),
     const SizedBox(height: 10),
     ReviewWidget(cardId: d.id),
@@ -475,9 +491,9 @@ FutureBuilder<bool>(
               color: const Color(0xFFE0F7E9),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
+            child: Text(
               "Added",
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 color: Colors.green,
                 fontWeight: FontWeight.w700,
               ),
@@ -490,9 +506,9 @@ FutureBuilder<bool>(
               onPressed: () {
                 Provider.of<CartProvider>(context, listen: false).removeItem(d.id);
               },
-              child: const Text(
+              child: Text(
                 "Remove",
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   color: Colors.redAccent,
                   fontWeight: FontWeight.w600,
                 ),
@@ -522,9 +538,9 @@ FutureBuilder<bool>(
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A73E8), // Google blue
+          backgroundColor: accentColor,
           foregroundColor: Colors.white,
-          textStyle: const TextStyle(
+          textStyle: GoogleFonts.montserrat(
             fontWeight: FontWeight.w700,
             letterSpacing: 0.3,
           ),
@@ -532,7 +548,12 @@ FutureBuilder<bool>(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: const Text("Add to Cart"),
+        child: Text(
+          "Add to Cart",
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   },
