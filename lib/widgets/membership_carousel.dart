@@ -2,6 +2,7 @@ import 'package:Outbox/models/cart_model.dart';
 import 'package:Outbox/models/membership_model.dart';
 import 'package:Outbox/providers/cart_provider.dart';
 import 'package:Outbox/services/purchase_status_service.dart';
+import 'package:Outbox/services/review_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
 import 'package:Outbox/widgets/membership_carousel_modal.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,12 +13,14 @@ class MembershipCarousel extends StatelessWidget {
   final String searchQuery;
   final String? selectedTrainer;
   final bool filterFutureDate;
+  final bool isDarkMode;
 
   const MembershipCarousel({
     super.key,
     this.searchQuery = '',
     this.selectedTrainer,
     this.filterFutureDate = false,
+    this.isDarkMode = false,
   });
 
   @override
@@ -53,22 +56,24 @@ class MembershipCarousel extends StatelessWidget {
           return matchesName && matchesTrainer && matchesDate;
         }).toList();
 
-        return _buildCarousel(filteredItems, context);
+        return _buildCarousel(filteredItems, context, isDarkMode);
       },
     );
   }
 
-  Widget _buildCarousel(List<MembershipCarouselData> items, BuildContext context) {
+  Widget _buildCarousel(List<MembershipCarouselData> items, BuildContext context, bool isDarkMode) {
+    final Color headlineColor = isDarkMode ? const Color(0xFFC5A572) : Colors.black;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 32),
-        const Text(
+        Text(
           "Find Your New Latest Packages",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: headlineColor,
           ),
         ),
         const SizedBox(height: 16),
@@ -79,7 +84,7 @@ class MembershipCarousel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: items
                 .map(
-                  (item) => _buildCard(item, context),
+                  (item) => _buildCard(item, context, isDarkMode),
                 )
                 .toList(),
           ),
@@ -88,22 +93,31 @@ class MembershipCarousel extends StatelessWidget {
     );
   }
 
-  Widget _buildCard(MembershipCarouselData card, BuildContext context) {
+  Widget _buildCard(MembershipCarouselData card, BuildContext context, bool isDarkMode) {
+    final Color cardColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final Color textColor = isDarkMode ? Colors.white : Colors.black87;
+    final Color subTextColor = isDarkMode ? Colors.white70 : Colors.grey[700]!;
+    
     return Container(
       width: 300,
       margin: const EdgeInsets.symmetric(horizontal: 12),
-      child: SizedBox(
-        height: 470,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 4)),
-            ],
-          ),
-          child: Column(
-            children: [
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          MembershipCarouselModal.show(context, card, isDarkMode);
+        },
+        child: SizedBox(
+          height: 470,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              children: [
               /// IMAGE with TAG
               Stack(
                 children: [
@@ -156,25 +170,27 @@ class MembershipCarousel extends StatelessWidget {
 
                   Text(
                     card.type,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black87),
+                        color: textColor),
                   ),
 
                   const SizedBox(height: 4),
 
                   Row(
                     children: [
-                      Text(
-                        card.title,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          card.title,
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         "AED ${card.price}",
-                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                        style: TextStyle(fontSize: 13, color: subTextColor),
                       ),
                     ],
                   ),
@@ -186,7 +202,7 @@ class MembershipCarousel extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
+                        color: isDarkMode ? Colors.grey[800] : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -208,9 +224,9 @@ class MembershipCarousel extends StatelessWidget {
                                         Expanded(
                                           child: Text(
                                             card.date,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
-                                              color: Colors.black87,
+                                              color: textColor,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -233,9 +249,9 @@ class MembershipCarousel extends StatelessWidget {
                                         Expanded(
                                           child: Text(
                                             card.location,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
-                                              color: Colors.black87,
+                                              color: textColor,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -260,10 +276,10 @@ class MembershipCarousel extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     card.mentor,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      color: textColor,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -276,32 +292,44 @@ class MembershipCarousel extends StatelessWidget {
                     const SizedBox(height: 12),
                   ],
 
-                      const Spacer(),
-
-                      // Know More Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            MembershipCarouselModal.show(context, card);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A73E8),
-                            foregroundColor: Colors.white,
-                            textStyle: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
+                  // REVIEW AVERAGE
+                  StreamBuilder<double>(
+                    stream: ReviewService.avgRating(card.id),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final rating = snapshot.data!;
+                        return Row(
+                          children: [
+                            Icon(
+                              rating > 0 ? Icons.star : Icons.star_border,
+                              color: rating > 0 ? Colors.amber : subTextColor,
+                              size: 16,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            const SizedBox(width: 4),
+                            Text(
+                              rating > 0
+                                  ? "Review: ${rating.toStringAsFixed(1)}"
+                                  : "0 review",
+                              style: TextStyle(color: subTextColor, fontSize: 13),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Icon(Icons.star_border, color: subTextColor, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            "0 review",
+                            style: TextStyle(color: subTextColor, fontSize: 13),
                           ),
-                          child: const Text("Know More"),
-                        ),
-                      ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
 
-                      const SizedBox(height: 10),
+                      const Spacer(),
 
                       FutureBuilder<bool>(
                         future: PurchaseStatusService.isPurchased(card.id),
@@ -446,6 +474,7 @@ class MembershipCarousel extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

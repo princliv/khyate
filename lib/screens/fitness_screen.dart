@@ -284,6 +284,7 @@ const SizedBox(height: 92),
               searchQuery: searchQuery,
               selectedTrainer: selectedTrainer,
               filterFutureDate: filterFutureDate,
+              isDarkMode: widget.isDarkMode,
             ),
 
             const SizedBox(height: 32),

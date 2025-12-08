@@ -253,6 +253,47 @@ class WellnessModal extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
+                      // Review Average
+                      StreamBuilder<double>(
+                        stream: ReviewService.avgRating(documentId),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            final rating = snapshot.data!;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 20.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    rating > 0 ? Icons.star : Icons.star_border,
+                                    color: rating > 0 ? Colors.amber : subTextColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    rating > 0
+                                        ? "Review: ${rating.toStringAsFixed(1)}"
+                                        : "0 review",
+                                    style: TextStyle(color: subTextColor, fontSize: 15),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 20.0),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star_border, color: subTextColor, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "0 review",
+                                  style: TextStyle(color: subTextColor, fontSize: 15),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                       // Description
                       Text(
                         "Description",

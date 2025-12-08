@@ -1,6 +1,7 @@
 import 'package:Outbox/models/cart_model.dart';
 import 'package:Outbox/providers/cart_provider.dart';
 import 'package:Outbox/services/purchase_status_service.dart';
+import 'package:Outbox/services/review_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
 import 'package:flutter/material.dart';
 // import 'package:khyate_b2b/models/cart_model.dart';
@@ -228,14 +229,39 @@ class MembershipCard extends StatelessWidget {
                   const SizedBox(height: 6),
 
                   // REVIEWS
-                  Row(
-                    children: [
-                      Icon(Icons.star_border, color: Colors.black38, size: 16),
-                      Text(
-                        data.reviews,
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                    ],
+                  StreamBuilder<double>(
+                    stream: ReviewService.avgRating(data.id),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final rating = snapshot.data!;
+                        return Row(
+                          children: [
+                            Icon(
+                              rating > 0 ? Icons.star : Icons.star_border,
+                              color: rating > 0 ? Colors.amber : Colors.black38,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              rating > 0
+                                  ? "Review: ${rating.toStringAsFixed(1)}"
+                                  : "0 review",
+                              style: TextStyle(color: Colors.black54, fontSize: 13),
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Icon(Icons.star_border, color: Colors.black38, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            "0 review",
+                            style: TextStyle(color: Colors.black54, fontSize: 13),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 6),
 

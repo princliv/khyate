@@ -251,20 +251,46 @@ class MembershipModal extends StatelessWidget {
                           ),
                         ),
                       // Reviews
-                      if (data.reviews.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Row(
-                            children: [
-                              Icon(Icons.star_border, color: Color(0xFFDF50B7), size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                data.reviews,
-                                style: TextStyle(color: subTextColor, fontSize: 15),
+                      StreamBuilder<double>(
+                        stream: ReviewService.avgRating(data.id),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            final rating = snapshot.data!;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    rating > 0 ? Icons.star : Icons.star_border,
+                                    color: rating > 0 ? Colors.amber : Color(0xFFDF50B7),
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    rating > 0
+                                        ? "Review: ${rating.toStringAsFixed(1)}"
+                                        : "0 review",
+                                    style: TextStyle(color: subTextColor, fontSize: 15),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star_border, color: Color(0xFFDF50B7), size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  "0 review",
+                                  style: TextStyle(color: subTextColor, fontSize: 15),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                         FutureBuilder<Map<String, dynamic>?>(
   future: ReviewService.getUserReview(data.id),
   builder: (context, snapshot) {

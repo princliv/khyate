@@ -1,6 +1,7 @@
 import 'package:Outbox/models/cart_model.dart';
 import 'package:Outbox/providers/cart_provider.dart';
 import 'package:Outbox/services/purchase_status_service.dart';
+import 'package:Outbox/services/review_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -391,6 +392,43 @@ StreamBuilder<QuerySnapshot>(
                   fontSize: 15,
                   color: subTextColor,
                 ),
+              ),
+              SizedBox(height: 12),
+
+              // REVIEW AVERAGE
+              StreamBuilder<double>(
+                stream: ReviewService.avgRating(d.id),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final rating = snapshot.data!;
+                    return Row(
+                      children: [
+                        Icon(
+                          rating > 0 ? Icons.star : Icons.star_border,
+                          color: rating > 0 ? Colors.amber : subTextColor,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          rating > 0
+                              ? "Review: ${rating.toStringAsFixed(1)}"
+                              : "0 review",
+                          style: TextStyle(color: subTextColor, fontSize: 13),
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Icon(Icons.star_border, color: subTextColor, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        "0 review",
+                        style: TextStyle(color: subTextColor, fontSize: 13),
+                      ),
+                    ],
+                  );
+                },
               ),
               SizedBox(height: 12),
 

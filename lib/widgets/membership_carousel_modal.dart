@@ -4,17 +4,19 @@ import 'package:Outbox/models/membership_model.dart';
 
 class MembershipCarouselModal extends StatelessWidget {
   final MembershipCarouselData data;
+  final bool isDarkMode;
 
   const MembershipCarouselModal({
     super.key,
     required this.data,
+    this.isDarkMode = false,
   });
 
-  static void show(BuildContext context, MembershipCarouselData data) {
+  static void show(BuildContext context, MembershipCarouselData data, bool isDarkMode) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return MembershipCarouselModal(data: data);
+        return MembershipCarouselModal(data: data, isDarkMode: isDarkMode);
       },
     );
   }
@@ -22,6 +24,11 @@ class MembershipCarouselModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double maxDialogHeight = MediaQuery.of(context).size.height * 0.85;
+    final Color backgroundColor = isDarkMode ? const Color(0xFF1A2332) : Colors.white;
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF1A2332);
+    final Color titleColor = isDarkMode ? const Color(0xFFC5A572) : const Color(0xFF1A2332);
+    final Color subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final Color dividerColor = isDarkMode ? Colors.white24 : Colors.grey.shade300;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -30,7 +37,7 @@ class MembershipCarouselModal extends StatelessWidget {
         constraints: BoxConstraints(maxHeight: maxDialogHeight),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -45,21 +52,21 @@ class MembershipCarouselModal extends StatelessWidget {
                     Expanded(
                       child: Text(
                         data.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2332),
+                          color: titleColor,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Color(0xFF1A2332)),
+                      icon: Icon(Icons.close, color: textColor),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
               ),
-              const Divider(color: Colors.grey, height: 1),
+              Divider(color: dividerColor, height: 1),
               // Image
               if (data.imageUrl.isNotEmpty)
                 Container(
@@ -145,13 +152,54 @@ class MembershipCarouselModal extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 20),
+                      // Review Average
+                      StreamBuilder<double>(
+                        stream: ReviewService.avgRating(data.id),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            final rating = snapshot.data!;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 20.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    rating > 0 ? Icons.star : Icons.star_border,
+                                    color: rating > 0 ? Colors.amber : subTextColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    rating > 0
+                                        ? "Review: ${rating.toStringAsFixed(1)}"
+                                        : "0 review",
+                                    style: TextStyle(color: subTextColor, fontSize: 15),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 20.0),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star_border, color: subTextColor, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "0 review",
+                                  style: TextStyle(color: subTextColor, fontSize: 15),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                       // Features Section
-                      const Text(
+                      Text(
                         "Features",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2332),
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -171,10 +219,10 @@ class MembershipCarouselModal extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   feature,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     height: 1.5,
-                                    color: Colors.black87,
+                                    color: textColor,
                                   ),
                                 ),
                               ),
@@ -184,12 +232,12 @@ class MembershipCarouselModal extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       // Details Section
-                      const Text(
+                      Text(
                         "Details",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2332),
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -203,7 +251,7 @@ class MembershipCarouselModal extends StatelessWidget {
                               const SizedBox(width: 8),
                               Text(
                                 "Trainer: ${data.mentor}",
-                                style: const TextStyle(color: Colors.black54, fontSize: 15),
+                                style: TextStyle(color: subTextColor, fontSize: 15),
                               ),
                             ],
                           ),
@@ -218,7 +266,7 @@ class MembershipCarouselModal extends StatelessWidget {
                               const SizedBox(width: 8),
                               Text(
                                 "Date: ${data.date}",
-                                style: const TextStyle(color: Colors.black54, fontSize: 15),
+                                style: TextStyle(color: subTextColor, fontSize: 15),
                               ),
                             ],
                           ),
@@ -234,7 +282,7 @@ class MembershipCarouselModal extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   "Location: ${data.location}",
-                                  style: const TextStyle(color: Colors.black54, fontSize: 15),
+                                  style: TextStyle(color: subTextColor, fontSize: 15),
                                 ),
                               ),
                             ],
@@ -284,9 +332,9 @@ class MembershipCarouselModal extends StatelessWidget {
         // Comment
         Text(
           userReview['comment'] ?? "",
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
-            color: Colors.black87,
+            color: textColor,
           ),
         ),
 
