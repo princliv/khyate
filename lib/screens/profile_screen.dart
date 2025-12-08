@@ -29,6 +29,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final address = TextEditingController();
   final country = TextEditingController();
   final phone = TextEditingController();
+  final profileImageUrl = TextEditingController();
+
 
   bool isLoading = true;
   bool _isDarkMode = false;
@@ -174,50 +176,54 @@ String fullPhone = "";
     });
   }
 
-  Future<void> loadProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final uid = user?.uid;
-    if (uid != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final data = doc.data();
-      
-      // Load from Firestore if available
-      if (data != null) {
-        firstName.text = data['firstName'] ?? '';
-        lastName.text = data['lastName'] ?? '';
-        email.text = data['email'] ?? '';
-        birthday.text = data['birthday'] ?? '';
-        gender.text = data['gender'] ?? '';
-        emiratesId.text = data['emiratesId'] ?? '';
-        address.text = data['address'] ?? '';
-        country.text = data['country'] ?? '';
-        phone.text = data['phone'] ?? '';
-      }
-      
-      // If firstName, lastName, or email are empty, try to get from Firebase Auth user object
-      if (user != null) {
-        if (firstName.text.isEmpty || lastName.text.isEmpty) {
-          if (user.displayName != null && user.displayName!.isNotEmpty) {
-            final nameParts = user.displayName!.trim().split(' ');
-            if (firstName.text.isEmpty && nameParts.isNotEmpty) {
-              firstName.text = nameParts[0];
-            }
-            if (lastName.text.isEmpty && nameParts.length > 1) {
-              lastName.text = nameParts.sublist(1).join(' ');
-            }
+Future<void> loadProfile() async {
+  final user = FirebaseAuth.instance.currentUser;
+  final uid = user?.uid;
+
+  if (uid != null) {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = doc.data();
+
+    // Now it's safe to read data
+    profileImageUrl.text = data?['profileImage'] ?? '';
+
+    if (data != null) {
+      firstName.text = data['firstName'] ?? '';
+      lastName.text = data['lastName'] ?? '';
+      email.text = data['email'] ?? '';
+      birthday.text = data['birthday'] ?? '';
+      gender.text = data['gender'] ?? '';
+      emiratesId.text = data['emiratesId'] ?? '';
+      address.text = data['address'] ?? '';
+      country.text = data['country'] ?? '';
+      phone.text = data['phone'] ?? '';
+    }
+
+    // Load missing info from Firebase auth
+    if (user != null) {
+      if (firstName.text.isEmpty || lastName.text.isEmpty) {
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          final nameParts = user.displayName!.trim().split(' ');
+          if (firstName.text.isEmpty && nameParts.isNotEmpty) {
+            firstName.text = nameParts[0];
+          }
+          if (lastName.text.isEmpty && nameParts.length > 1) {
+            lastName.text = nameParts.sublist(1).join(' ');
           }
         }
-        
-        if (email.text.isEmpty && user.email != null && user.email!.isNotEmpty) {
-          email.text = user.email!;
-        }
+      }
+
+      if (email.text.isEmpty && user.email != null && user.email!.isNotEmpty) {
+        email.text = user.email!;
       }
     }
-    // Normalize phone/country selections for UI
-    _hydratePhoneForUi();
-    _formatEmiratesIdForUi();
-    setState(() => isLoading = false);
   }
+
+  _hydratePhoneForUi();
+  _formatEmiratesIdForUi();
+  setState(() => isLoading = false);
+}
+
 
   void _formatEmiratesIdForUi() {
     final raw = emiratesId.text.replaceAll(RegExp(r'[^\d]'), '');
@@ -314,6 +320,10 @@ String fullPhone = "";
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+  "profileImage": profileImageUrl.text,
+});
+
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(
             content: const Text("Profile updated"),
@@ -745,32 +755,29 @@ Widget buildPhoneField() {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [const Color(0xFF21B998), const Color(0xFF0097B2)],
-                        ),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                          width: 4,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF21B998).withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.person,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
+Container(
+  width: 80,
+  height: 80,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    border: Border.all(
+      color: isDark ? Color(0xFF1E293B) : Colors.white,
+      width: 4,
+    ),
+  ),
+  child: ClipOval(
+    child: profileImageUrl.text.isEmpty
+        ? Icon(Icons.person, size: 40, color: Colors.white)
+        : Image.network(
+            profileImageUrl.text,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(Icons.error, color: Colors.red);
+            },
+          ),
+  ),
+),
+
                     const SizedBox(width: 20),
                     Expanded(
                       child: Column(
@@ -811,6 +818,8 @@ Widget buildPhoneField() {
                   infoRow("First Name", firstName.text, textColor, Icons.person, isDark),
                   infoRow("Last Name", lastName.text, textColor, Icons.person_outline, isDark),
                   infoRow("Email", email.text, textColor, Icons.email, isDark),
+                  infoRow("Profile Image URL", profileImageUrl.text, textColor, Icons.image, isDark),
+
                 ],
               ),
 
