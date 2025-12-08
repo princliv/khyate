@@ -5,18 +5,26 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/purchase_service.dart';   // ✅ ADD THIS IMPORT
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   final bool isDarkMode;
   const CartScreen({super.key, required this.isDarkMode});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  bool _showHistory = false;
 
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
 
-    final bg = isDarkMode ? Colors.black : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final bg = widget.isDarkMode ? Colors.black : Colors.white;
+    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
     final cardColor =
-        isDarkMode ? const Color(0xFF101822) : Colors.grey.shade100;
+        widget.isDarkMode ? const Color(0xFF101822) : Colors.grey.shade100;
+    final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.black54;
 
     return Scaffold(
       backgroundColor: bg,
@@ -24,44 +32,97 @@ class CartScreen extends StatelessWidget {
         backgroundColor: bg,
         elevation: 0,
         iconTheme:
-            IconThemeData(color: isDarkMode ? Colors.white : Colors.black),
-        title: Text(
-          "Your Cart",
-          style: TextStyle(color: textColor),
+            IconThemeData(color: widget.isDarkMode ? Colors.white : Colors.black),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Your Cart",
+              style: TextStyle(color: textColor),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _showHistory = !_showHistory;
+                });
+              },
+              child: Text(
+                "History",
+                style: TextStyle(
+                  color: widget.isDarkMode ? Colors.blueAccent : Colors.blue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
 
-      body: cart.items.isEmpty
+      body: cart.items.isEmpty && !_showHistory
           ? Center(
-              child: Text(
-                "Your cart is empty",
-                style: TextStyle(fontSize: 18, color: textColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: widget.isDarkMode
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 80,
+                      color: subTextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "Your cart is empty",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Add items to get started",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: subTextColor,
+                    ),
+                  ),
+                ],
               ),
             )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: cart.items.length,
-                    itemBuilder: (context, index) {
-                      final item = cart.items[index];
-                      final bool isNetworkImage = item.imageUrl.startsWith('http');
+          : _showHistory
+              ? _buildHistoryView(context, textColor, subTextColor)
+              : Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: cart.items.length,
+                        itemBuilder: (context, index) {
+                          final item = cart.items[index];
+                          final bool isNetworkImage = item.imageUrl.startsWith('http');
 
-                      return Container(
-                        margin:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF1A2332) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            if (!isDarkMode)
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                          ],
-                        ),
+                          return Container(
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: widget.isDarkMode ? const Color(0xFF1A2332) : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                if (!widget.isDarkMode)
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                              ],
+                            ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
@@ -109,7 +170,7 @@ class CartScreen extends StatelessWidget {
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: isDarkMode
+                                            color: widget.isDarkMode
                                                 ? Colors.white10
                                                 : const Color(0xFFE8F0FE),
                                             borderRadius:
@@ -118,7 +179,7 @@ class CartScreen extends StatelessWidget {
                                           child: Text(
                                             item.type.toUpperCase(),
                                             style: TextStyle(
-                                              color: isDarkMode
+                                              color: widget.isDarkMode
                                                   ? Colors.white70
                                                   : const Color(0xFF1A73E8),
                                               fontSize: 11,
@@ -145,7 +206,7 @@ class CartScreen extends StatelessWidget {
                               IconButton(
                                 icon: Icon(
                                   Icons.delete_outline,
-                                  color: isDarkMode
+                                  color: widget.isDarkMode
                                       ? Colors.redAccent
                                       : const Color(0xFFE53935),
                                 ),
@@ -160,124 +221,6 @@ class CartScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                // -----------------------------
-// PURCHASE HISTORY SECTION
-// -----------------------------
-FutureBuilder<String>(
-  future: Future.value(FirebaseAuth.instance.currentUser?.uid),
-  builder: (context, uidSnapshot) {
-    if (!uidSnapshot.hasData) return SizedBox();
-
-    final uid = uidSnapshot.data!;
-    final purchasesRef = FirebaseFirestore.instance
-        .collection("users")
-        .doc(uid)
-        .collection("purchases")
-        .orderBy("purchasedAt", descending: true);
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: purchasesRef.snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return SizedBox();
-
-        final purchases = snapshot.data!.docs;
-
-        if (purchases.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              "No previous purchases",
-              style: TextStyle(color: textColor.withOpacity(0.6)),
-            ),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Text(
-                "Purchase History",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-            ),
-
-            SizedBox(
-              height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: purchases.length,
-                itemBuilder: (context, index) {
-                  final item = purchases[index].data() as Map<String, dynamic>;
-
-                  return Container(
-                    width: 160,
-                    margin: const EdgeInsets.only(left: 16, bottom: 20),
-                    decoration: BoxDecoration(
-                      color: isDarkMode
-                          ? Color(0xFF1A2332)
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Thumbnail
-                        ClipRRect(
-                          borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(16)),
-                          child: Image.network(
-                            item["imageUrl"],
-                            height: 100,
-                            width: 160,
-                            fit: BoxFit.cover,
-                            errorBuilder: (c, e, s) => Icon(Icons.error),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            item["title"] ?? "",
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: Text(
-                            "AED ${item["price"]}",
-                            style: TextStyle(
-                              color: Colors.greenAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  },
-),
-
-
                 // Total Section
                 Container(
                   padding: EdgeInsets.all(20),
@@ -304,7 +247,7 @@ FutureBuilder<String>(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color:
-                                  isDarkMode ? Colors.greenAccent : Colors.green,
+                                  widget.isDarkMode ? Colors.greenAccent : Colors.green,
                             ),
                           ),
                         ],
@@ -326,13 +269,13 @@ FutureBuilder<String>(
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              isDarkMode ? Colors.greenAccent : Colors.green,
+                              widget.isDarkMode ? Colors.greenAccent : Colors.green,
                           minimumSize: Size(double.infinity, 50),
                         ),
                         child: Text(
                           "Checkout",
                           style: TextStyle(
-                              color: isDarkMode ? Colors.black : Colors.white),
+                              color: widget.isDarkMode ? Colors.black : Colors.white),
                         ),
                       )
                     ],
@@ -340,6 +283,164 @@ FutureBuilder<String>(
                 )
               ],
             ),
+    );
+  }
+
+  Widget _buildHistoryView(BuildContext context, Color textColor, Color subTextColor) {
+    return FutureBuilder<String>(
+      future: Future.value(FirebaseAuth.instance.currentUser?.uid),
+      builder: (context, uidSnapshot) {
+        if (!uidSnapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        final uid = uidSnapshot.data!;
+        final purchasesRef = FirebaseFirestore.instance
+            .collection("users")
+            .doc(uid)
+            .collection("purchases")
+            .orderBy("purchasedAt", descending: true);
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: purchasesRef.snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: widget.isDarkMode
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.history,
+                        size: 80,
+                        color: subTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "No purchase history",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Your past purchases will appear here",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final purchases = snapshot.data!.docs;
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: purchases.length,
+              itemBuilder: (context, index) {
+                final item = purchases[index].data() as Map<String, dynamic>;
+
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: widget.isDarkMode
+                        ? const Color(0xFF1A2332)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      if (!widget.isDarkMode)
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Thumbnail
+                      ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                        ),
+                        child: Image.network(
+                          item["imageUrl"] ?? '',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => Container(
+                            width: 120,
+                            height: 120,
+                            color: widget.isDarkMode
+                                ? Colors.white10
+                                : Colors.grey.shade200,
+                            child: Icon(
+                              Icons.image_not_supported,
+                              color: subTextColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item["title"] ?? "",
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "AED ${item["price"] ?? 0}",
+                                style: TextStyle(
+                                  color: widget.isDarkMode
+                                      ? Colors.greenAccent
+                                      : Colors.green,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
