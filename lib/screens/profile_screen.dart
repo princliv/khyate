@@ -293,6 +293,23 @@ String fullPhone = "";
     }
   }
 
+  Future<bool> _emiratesIdExistsForAnotherUser(String digitsOnly) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return false;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('emiratesId', isEqualTo: digitsOnly)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return false;
+      // If found but belongs to current user, it's fine
+      return snap.docs.first.id != uid;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> updateSection(Map<String, dynamic> updates) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
@@ -810,7 +827,7 @@ Widget buildPhoneField() {
                       _buildGenderRadioButtons(),
                       _buildEmiratesIdField(),
                     ],
-                    onSave: () {
+                    onSave: () async {
                       final validation = _validateEmiratesId(emiratesId.text);
                       if (validation != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -824,6 +841,20 @@ Widget buildPhoneField() {
 
                       final digitsOnly = emiratesId.text.replaceAll('-', '');
                       final formattedDisplay = _formatEmiratesId(digitsOnly);
+                      final existsElsewhere =
+                          await _emiratesIdExistsForAnotherUser(digitsOnly);
+                      if (existsElsewhere) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('This Emirates ID is already registered'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
                       updateSection({
                         "birthday": birthday.text,
                         "gender": gender.text,
