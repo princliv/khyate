@@ -838,27 +838,16 @@ Widget buildPhoneField() {
             final cleanCode = selectedCountryCode.replaceAll('+', '');
             fullPhone = '+$cleanCode$numberWithoutCode';
 
-            // Lenient validation: only show error if clearly invalid
+            // Strict validation: require exactly 10 digits (common mobile length)
             if (numberWithoutCode.isEmpty) {
+              phoneValid = false;
+              phoneValidationMessage = "Phone number is required";
+            } else if (numberWithoutCode.length != 10) {
+              phoneValid = false;
+              phoneValidationMessage = "Phone number must be 10 digits";
+            } else {
               phoneValid = true;
               phoneValidationMessage = null;
-            } else {
-              // Check basic validity: should be 7-15 digits
-              bool isValidLength = numberWithoutCode.length >= 7 && numberWithoutCode.length <= 15;
-              bool hasOnlyDigits = RegExp(r'^\\d+$').hasMatch(numberWithoutCode);
-
-              if (isValidLength && hasOnlyDigits) {
-                phoneValid = true;
-                phoneValidationMessage = null;
-              } else if (numberWithoutCode.length < 7) {
-                // Too short, but don't show error while typing
-                phoneValid = true;
-                phoneValidationMessage = null;
-              } else {
-                // Clearly invalid (wrong length or has non-digits)
-                phoneValid = false;
-                phoneValidationMessage = "Invalid number format";
-              }
             }
           });
         },
@@ -1245,16 +1234,15 @@ buildCard(
       )
     ],
     onSave: () async {
-      // Final validation before saving
+      // Final validation before saving: require exactly 10 digits
       String numberWithoutCode = phone.text.replaceAll(RegExp(r'[^\d]'), '');
-      bool isNumberValid = numberWithoutCode.length >= 7 && 
-                          numberWithoutCode.length <= 15 &&
+      bool isNumberValid = numberWithoutCode.length == 10 &&
                           RegExp(r'^\d+$').hasMatch(numberWithoutCode);
       
-      if (!isNumberValid && phone.text.isNotEmpty) {
+      if (!isNumberValid) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Please enter a valid phone number"),
+            content: Text("Phone number must be 10 digits"),
             backgroundColor: Colors.red,
           ),
         );
