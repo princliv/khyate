@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/auth_service.dart';
@@ -779,6 +778,13 @@ Future<void> loadProfile() async {
     );
   }
 Widget buildPhoneField() {
+  final isDark = _isDarkMode;
+  final Color fieldBg = isDark ? const Color(0xFF2D3748) : Colors.white;
+  final Color textColor = isDark ? Colors.white : const Color(0xFF1A2332);
+  final Color labelColor = isDark ? Colors.white70 : const Color(0xFF4A5568);
+  final Color borderColor = isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0);
+  final Color focusColor = const Color(0xFF21B998);
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -790,22 +796,48 @@ Widget buildPhoneField() {
         ),
       ),
       const SizedBox(height: 10),
-
-      IntlPhoneField(
+      TextField(
         controller: phone,
-        initialCountryCode: _initialCountryIsoFromCode(selectedCountryCode),
+        keyboardType: TextInputType.phone,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: TextStyle(color: textColor, fontSize: 16),
         decoration: InputDecoration(
           hintText: "Enter phone number",
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+          prefixIcon: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Text(
+              selectedCountryCode,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          filled: true,
+          fillColor: fieldBg,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: borderColor, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: borderColor, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: focusColor, width: 2),
+          ),
+          labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
         ),
         onChanged: (value) {
           setState(() {
-            fullPhone = value.completeNumber;
-            // Get the number without country code for validation
-            String numberWithoutCode = value.number.trim();
-            
+            final numberWithoutCode = value.trim();
+
+            // Compose full phone with selected country code from above picker
+            final cleanCode = selectedCountryCode.replaceAll('+', '');
+            fullPhone = '+$cleanCode$numberWithoutCode';
+
             // Lenient validation: only show error if clearly invalid
             if (numberWithoutCode.isEmpty) {
               phoneValid = true;
@@ -813,11 +845,9 @@ Widget buildPhoneField() {
             } else {
               // Check basic validity: should be 7-15 digits
               bool isValidLength = numberWithoutCode.length >= 7 && numberWithoutCode.length <= 15;
-              bool hasOnlyDigits = RegExp(r'^\d+$').hasMatch(numberWithoutCode);
-              
+              bool hasOnlyDigits = RegExp(r'^\\d+$').hasMatch(numberWithoutCode);
+
               if (isValidLength && hasOnlyDigits) {
-                // Consider valid if it has proper length and digits
-                // The library's isValidNumber() can be too strict, so we're lenient
                 phoneValid = true;
                 phoneValidationMessage = null;
               } else if (numberWithoutCode.length < 7) {
@@ -830,26 +860,6 @@ Widget buildPhoneField() {
                 phoneValidationMessage = "Invalid number format";
               }
             }
-            
-            // Ensure countryCode doesn't already have a + sign
-            String countryCode = value.countryCode.replaceAll('+', '');
-            selectedCountryCode = '+$countryCode';
-            // Sync country picker with phone field's country using country code
-            selectedCountryName = _getCountryNameFromCode(selectedCountryCode);
-          });
-        },
-        onCountryChanged: (country) {
-          setState(() {
-            // Ensure dialCode doesn't already have a + sign
-            String dialCode = country.dialCode.replaceAll('+', '');
-            selectedCountryCode = '+$dialCode';
-            // Use country name directly from intl_phone_field Country type
-            selectedCountryName = country.name;
-            // Reset validation when country changes
-            phoneValid = true;
-            phoneValidationMessage = null;
-            // Note: Can't assign intl_phone_field Country to country_picker Country
-            // They are different types, so we'll keep them separate
           });
         },
       ),
@@ -1383,8 +1393,12 @@ Widget buildCountryPickerField(StateSetter setDialogState) {
                 // Ensure phoneCode doesn't already have a + sign
                 String phoneCode = c.phoneCode.replaceAll('+', '');
                 selectedCountryCode = "+$phoneCode";
-                // Note: IntlPhoneField doesn't support programmatic country change,
-                // so user should change country in the phone field itself
+                // Recompute full phone with the selected country code
+                final numberWithoutCode = phone.text.trim();
+                fullPhone = '$selectedCountryCode$numberWithoutCode';
+                // Reset validation when country changes
+                phoneValid = true;
+                phoneValidationMessage = null;
               });
             },
           );
