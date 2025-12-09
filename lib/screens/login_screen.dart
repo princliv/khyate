@@ -96,6 +96,13 @@ class _LoginScreenState extends State<LoginScreen>
       });
     }
   }
+Future<void> resetPassword(String email) async {
+  try {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  } catch (e) {
+    throw e.toString();
+  }
+}
 
   void googleSignIn() async {
     setState(() {
@@ -168,6 +175,60 @@ class _LoginScreenState extends State<LoginScreen>
       });
     }
   }
+void _showForgotPasswordDialog(BuildContext context) {
+  TextEditingController emailController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Reset Password"),
+        content: TextField(
+          controller: emailController,
+          decoration: const InputDecoration(
+            hintText: "Enter your registered email",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(
+                  email: emailController.text.trim(),
+                );
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Password reset email sent"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Error: $e"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text("Send"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +461,22 @@ class _LoginScreenState extends State<LoginScreen>
                           },
                         ),
                         const SizedBox(height: 32),
+                        Align(
+  alignment: Alignment.centerRight,
+  child: TextButton(
+    onPressed: () {
+      _showForgotPasswordDialog(context);
+    },
+    child: const Text(
+      "Forgot Password?",
+      style: TextStyle(
+        color: Colors.blueAccent,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ),
+),
+
 
                         // Error message
                         if (message.isNotEmpty)
