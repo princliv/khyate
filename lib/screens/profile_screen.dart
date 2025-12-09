@@ -40,6 +40,7 @@ String selectedCountryCode = "+971";
 
 bool phoneValid = true;
 String fullPhone = "";
+String? phoneValidationMessage;
 int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
 
 
@@ -153,7 +154,9 @@ int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
     showPhoneCode: true,
     onSelect: (Country country) {
       setState(() {
-        selectedCountryCode = "+${country.phoneCode}";
+        // Ensure phoneCode doesn't already have a + sign
+        String phoneCode = country.phoneCode.replaceAll('+', '');
+        selectedCountryCode = "+$phoneCode";
         selectedCountryName = country.name;
       });
     },
@@ -285,18 +288,42 @@ Future<void> loadProfile() async {
 
     phone.text = localNumber;
     fullPhone = '$codePart$localNumber';
-    selectedCountryCode = codePart;
-    selectedCountryName = country.text.isNotEmpty ? country.text : selectedCountryName;
+    // Normalize codePart to ensure no double plus signs
+    String normalizedCode = codePart.replaceAll('+', '');
+    normalizedCode = '+$normalizedCode';
+    selectedCountryCode = normalizedCode;
+    // Update country name based on extracted country code, but prefer stored country name if available
+    String countryNameFromCode = _getCountryNameFromCode(normalizedCode);
+    selectedCountryName = country.text.isNotEmpty ? country.text : countryNameFromCode;
   }
 
   String _initialCountryIsoFromCode(String code) {
-    switch (code) {
+    // Normalize code to remove any double plus signs
+    String normalizedCode = code.replaceAll('+', '');
+    normalizedCode = '+$normalizedCode';
+    
+    switch (normalizedCode) {
       case '+91':
         return 'IN';
       case '+971':
         return 'AE';
       default:
         return 'AE';
+    }
+  }
+
+  String _getCountryNameFromCode(String code) {
+    // Normalize code to remove any double plus signs
+    String normalizedCode = code.replaceAll('+', '');
+    normalizedCode = '+$normalizedCode';
+    
+    switch (normalizedCode) {
+      case '+91':
+        return 'India';
+      case '+971':
+        return 'United Arab Emirates';
+      default:
+        return 'United Arab Emirates';
     }
   }
 
@@ -359,9 +386,18 @@ Future<void> loadProfile() async {
     showDialog(
       context: context,
       builder: (_) {
+        // Get available height considering keyboard
+        final mediaQuery = MediaQuery.of(context);
+        final availableHeight = mediaQuery.size.height - mediaQuery.viewInsets.bottom;
+        final maxDialogHeight = availableHeight * 0.85; // Use 85% of available height
+        
         return Dialog(
           backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Container(
+            constraints: BoxConstraints(
+              maxHeight: maxDialogHeight,
+            ),
             decoration: BoxDecoration(
               color: dialogBg,
               borderRadius: BorderRadius.circular(20),
@@ -370,83 +406,96 @@ Future<void> loadProfile() async {
                 width: 1,
               ),
             ),
-            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Edit Profile Image",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: titleColor,
-                    letterSpacing: 0.3,
+                // Title - fixed at top
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  child: Text(
+                    "Edit Profile Image",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: titleColor,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                TextField(
-                  controller: imageUrlController,
-                  style: TextStyle(color: textColor, fontSize: 16),
-                  decoration: InputDecoration(
-                    labelText: "Profile Image URL",
-                    prefixIcon: Icon(Icons.image, color: focusColor),
-                    filled: true,
-                    fillColor: fieldBg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor, width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor, width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: focusColor, width: 2),
-                    ),
-                    labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        foregroundColor: textColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                      child: const Text("Cancel"),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final newUrl = imageUrlController.text.trim();
-                        profileImageUrl.text = newUrl;
-                        await updateSection({
-                          "profileImage": newUrl,
-                        });
-                        if (mounted) {
-                          setState(() {
-                            _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
-                          });
-                          Navigator.pop(context);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: focusColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
+                // Scrollable content area
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: TextField(
+                      controller: imageUrlController,
+                      style: TextStyle(color: textColor, fontSize: 16),
+                      decoration: InputDecoration(
+                        labelText: "Profile Image URL",
+                        prefixIcon: Icon(Icons.image, color: focusColor),
+                        filled: true,
+                        fillColor: fieldBg,
+                        border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: borderColor, width: 1),
                         ),
-                        elevation: 2,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: borderColor, width: 1),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: focusColor, width: 2),
+                        ),
+                        labelStyle: TextStyle(color: labelColor, fontWeight: FontWeight.w500),
                       ),
-                      child: const Text("Save Changes"),
                     ),
-                  ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Buttons - fixed at bottom
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          foregroundColor: textColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        child: const Text("Cancel"),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final newUrl = imageUrlController.text.trim();
+                          profileImageUrl.text = newUrl;
+                          await updateSection({
+                            "profileImage": newUrl,
+                          });
+                          if (mounted) {
+                            setState(() {
+                              _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
+                            });
+                            Navigator.pop(context);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: focusColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Text("Save Changes"),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -470,9 +519,18 @@ Future<void> loadProfile() async {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // Get available height considering keyboard
+            final mediaQuery = MediaQuery.of(context);
+            final availableHeight = mediaQuery.size.height - mediaQuery.viewInsets.bottom;
+            final maxDialogHeight = availableHeight * 0.85; // Use 85% of available height
+            
             return Dialog(
               backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: maxDialogHeight,
+                ),
                 decoration: BoxDecoration(
                   color: dialogBg,
                   borderRadius: BorderRadius.circular(20),
@@ -481,13 +539,14 @@ Future<void> loadProfile() async {
                     width: 1,
                   ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title - fixed at top
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      child: Text(
                         title,
                         style: TextStyle(
                           fontSize: 22,
@@ -496,10 +555,23 @@ Future<void> loadProfile() async {
                           letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      ...fields,
-                      const SizedBox(height: 24),
-                      Row(
+                    ),
+                    const SizedBox(height: 24),
+                    // Scrollable content area
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: fields,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Buttons - fixed at bottom
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
@@ -526,8 +598,8 @@ Future<void> loadProfile() async {
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -731,24 +803,64 @@ Widget buildPhoneField() {
         onChanged: (value) {
           setState(() {
             fullPhone = value.completeNumber;
-            phoneValid = value.isValidNumber();
-            selectedCountryCode = '+${value.countryCode}';
+            // Get the number without country code for validation
+            String numberWithoutCode = value.number.trim();
+            
+            // Lenient validation: only show error if clearly invalid
+            if (numberWithoutCode.isEmpty) {
+              phoneValid = true;
+              phoneValidationMessage = null;
+            } else {
+              // Check basic validity: should be 7-15 digits
+              bool isValidLength = numberWithoutCode.length >= 7 && numberWithoutCode.length <= 15;
+              bool hasOnlyDigits = RegExp(r'^\d+$').hasMatch(numberWithoutCode);
+              
+              if (isValidLength && hasOnlyDigits) {
+                // Consider valid if it has proper length and digits
+                // The library's isValidNumber() can be too strict, so we're lenient
+                phoneValid = true;
+                phoneValidationMessage = null;
+              } else if (numberWithoutCode.length < 7) {
+                // Too short, but don't show error while typing
+                phoneValid = true;
+                phoneValidationMessage = null;
+              } else {
+                // Clearly invalid (wrong length or has non-digits)
+                phoneValid = false;
+                phoneValidationMessage = "Invalid number format";
+              }
+            }
+            
+            // Ensure countryCode doesn't already have a + sign
+            String countryCode = value.countryCode.replaceAll('+', '');
+            selectedCountryCode = '+$countryCode';
+            // Sync country picker with phone field's country using country code
+            selectedCountryName = _getCountryNameFromCode(selectedCountryCode);
           });
         },
         onCountryChanged: (country) {
           setState(() {
-            selectedCountryCode = '+${country.dialCode}';
+            // Ensure dialCode doesn't already have a + sign
+            String dialCode = country.dialCode.replaceAll('+', '');
+            selectedCountryCode = '+$dialCode';
+            // Use country name directly from intl_phone_field Country type
             selectedCountryName = country.name;
+            // Reset validation when country changes
+            phoneValid = true;
+            phoneValidationMessage = null;
+            // Note: Can't assign intl_phone_field Country to country_picker Country
+            // They are different types, so we'll keep them separate
           });
         },
       ),
 
-      if (phone.text.isNotEmpty)
+      if (phone.text.isNotEmpty && phoneValidationMessage != null)
         Text(
-          phoneValid ? "✔ Valid number" : "✖ Invalid number",
+          phoneValid ? "✔ Valid number" : "✖ $phoneValidationMessage",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: phoneValid ? Colors.green : Colors.red,
+            fontSize: 12,
           ),
         ),
     ],
@@ -1103,6 +1215,8 @@ buildCard(
   showEdit: true,
   isDark: isDark,
   onEdit: () {
+  // Ensure phone is hydrated before opening dialog
+  _hydratePhoneForUi();
   showEditDialog(
     title: "Edit Contact Information",
     fields: [
@@ -1121,10 +1235,16 @@ buildCard(
       )
     ],
     onSave: () async {
-      if (!phoneValid) {
+      // Final validation before saving
+      String numberWithoutCode = phone.text.replaceAll(RegExp(r'[^\d]'), '');
+      bool isNumberValid = numberWithoutCode.length >= 7 && 
+                          numberWithoutCode.length <= 15 &&
+                          RegExp(r'^\d+$').hasMatch(numberWithoutCode);
+      
+      if (!isNumberValid && phone.text.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Invalid phone number"),
+            content: Text("Please enter a valid phone number"),
             backgroundColor: Colors.red,
           ),
         );
@@ -1133,6 +1253,7 @@ buildCard(
 
       // Update text values for UI
       country.text = selectedCountryName;
+      // Store full phone number in phone.text for database
       phone.text = fullPhone;
 
       await updateSection({
@@ -1141,6 +1262,8 @@ buildCard(
         "address": address.text,
       });
 
+      // Re-hydrate phone to extract local number for display
+      _hydratePhoneForUi();
       Navigator.pop(context);
       setState(() {});
     },
@@ -1257,7 +1380,11 @@ Widget buildCountryPickerField(StateSetter setDialogState) {
               setDialogState(() {
                 selectedCountry = c;
                 selectedCountryName = c.name;
-                selectedCountryCode = "+${c.phoneCode}";
+                // Ensure phoneCode doesn't already have a + sign
+                String phoneCode = c.phoneCode.replaceAll('+', '');
+                selectedCountryCode = "+$phoneCode";
+                // Note: IntlPhoneField doesn't support programmatic country change,
+                // so user should change country in the phone field itself
               });
             },
           );
