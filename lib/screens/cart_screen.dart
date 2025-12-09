@@ -155,7 +155,7 @@ class _CartScreenState extends State<CartScreen> {
                                   children: [
                                     Text(
                                       item.title,
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: textColor,
@@ -166,34 +166,42 @@ class _CartScreenState extends State<CartScreen> {
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: widget.isDarkMode
-                                                ? Colors.white10
-                                                : const Color(0xFFE8F0FE),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            item.type.toUpperCase(),
-                                            style: TextStyle(
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
                                               color: widget.isDarkMode
-                                                  ? Colors.white70
-                                                  : const Color(0xFF1A73E8),
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
+                                                  ? Colors.white10
+                                                  : const Color(0xFFE8F0FE),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              item.type.toUpperCase(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: widget.isDarkMode
+                                                    ? Colors.white70
+                                                    : const Color(0xFF1A73E8),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        Text(
-                                          "AED ${item.price}",
-                                          style: const TextStyle(
-                                            color: Color(0xFF16AE8E),
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w700,
+                                        Flexible(
+                                          child: Text(
+                                            "AED ${item.price}",
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Color(0xFF16AE8E),
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
                                       ],
