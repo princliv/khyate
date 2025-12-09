@@ -358,15 +358,31 @@ Future<void> loadProfile() async {
 
   Future<void> updateSection(Map<String, dynamic> updates) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(
-            content: const Text("Profile updated"),
-            backgroundColor: const Color(0xFF21B998),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ));
+    if (uid == null) return;
+    try {
+      // Use set with merge to ensure the document is created if missing and fields persist
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set(updates, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Profile updated"),
+          backgroundColor: const Color(0xFF21B998),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to update profile: $e"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
