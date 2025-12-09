@@ -68,4 +68,12 @@ class AuthService {
     UserCredential result = await _auth.signInWithCredential(credential);
     return result.user;
   }
+  Future<void> resetPassword(String email) async {
+  try {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+  } catch (e) {
+    rethrow;
+  }
+}
+
 }
