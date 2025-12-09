@@ -1,4 +1,5 @@
 import 'package:Outbox/providers/cart_provider.dart';
+import 'package:Outbox/screens/auth_check.dart';
 import 'package:Outbox/screens/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -50,7 +51,8 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Outbox',
         debugShowCheckedModeBanner: false,
-        home: OnboardingScreen(),
+        home: AuthCheck(),
+
       ),
     );
   }
