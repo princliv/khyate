@@ -3,7 +3,6 @@ import 'package:Outbox/providers/cart_provider.dart';
 import 'package:Outbox/services/purchase_status_service.dart';
 import 'package:Outbox/services/review_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 // import 'package:khyate_b2b/models/cart_model.dart';
@@ -201,23 +200,23 @@ Align(
 
 const SizedBox(height: 20),
 
-StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance.collection("wellnesscards").snapshots(),
+// TODO: Replace with your API stream
+StreamBuilder<List<Map<String, dynamic>>>(
+  stream: Stream.value([]), // Stub - replace with YourApiService.getWellnessCardsStream()
   builder: (context, snap) {
     if (!snap.hasData) {
       return Center(child: CircularProgressIndicator());
     }
 
-    final docs = snap.data!.docs;
+    final docs = snap.data!;
 
     return Column(
-      children: docs.map((d) {
-        final data = d.data() as Map<String, dynamic>;
+      children: docs.map((data) {
         final String imageUrl = (data['imageUrl'] as String?) ?? '';
 
         return InkWell(
           onTap: () {
-            WellnessModal.show(context, data, d.id, isDarkMode);
+            WellnessModal.show(context, data, data['id'] ?? '', isDarkMode);
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
@@ -404,7 +403,7 @@ StreamBuilder<QuerySnapshot>(
 
               // REVIEW AVERAGE
               StreamBuilder<double>(
-                stream: ReviewService.avgRating(d.id),
+                stream: ReviewService.avgRating(data['id'] ?? ''),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     final rating = snapshot.data!;
@@ -446,7 +445,7 @@ StreamBuilder<QuerySnapshot>(
               SizedBox(height: 12),
 
 FutureBuilder<bool>(
-  future: PurchaseStatusService.isPurchased(d.id),
+  future: PurchaseStatusService.isPurchased(data['id'] ?? ''),
   builder: (context, snapshot) {
     if (!snapshot.hasData) {
       return CircularProgressIndicator();
@@ -471,14 +470,14 @@ FutureBuilder<bool>(
       ),
     ),
     const SizedBox(height: 10),
-    ReviewWidget(cardId: d.id),
+    ReviewWidget(cardId: data['id'] ?? ''),
   ],
 );
 
     }
 
     final cartItems = Provider.of<CartProvider>(context).items;
-    final isInCart = cartItems.any((item) => item.id == d.id);
+    final isInCart = cartItems.any((item) => item.id == data['id']);
 
     if (isInCart) {
       return Column(
@@ -504,7 +503,7 @@ FutureBuilder<bool>(
             height: 32,
             child: TextButton(
               onPressed: () {
-                Provider.of<CartProvider>(context, listen: false).removeItem(d.id);
+                Provider.of<CartProvider>(context, listen: false).removeItem(data['id'] ?? '');
               },
               child: Text(
                 "Remove",
@@ -527,12 +526,12 @@ FutureBuilder<bool>(
         onPressed: () {
           Provider.of<CartProvider>(context, listen: false).addItem(
             CartItem(
-              id: d.id,
+              id: data['id'] ?? '',
               title: data['title'],
               imageUrl: imageUrl.isNotEmpty
                   ? imageUrl
                   : 'assets/default_thumbnail.webp',
-              price: int.parse(data['price']),
+              price: int.parse(data['price'] ?? '0'),
               type: "wellness",
             ),
           );

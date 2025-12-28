@@ -1,7 +1,6 @@
 import 'package:Outbox/screens/admin/trainer_manager.dart';
 import 'package:Outbox/screens/admin/wellness_card_manager.dart';
 import 'package:Outbox/screens/purchase_list_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 // import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
 // import 'package:khyate_b2b/screens/admin/wellness_card_manager.dart';
@@ -74,33 +73,35 @@ class _MembershipCarouselManagerState
   final _location = TextEditingController();
 
   String? selectedTrainer;
-  List<DocumentSnapshot> trainers = [];
+  List<Map<String, dynamic>> trainers = [];
   String? selectedDate;
 
   @override
   void initState() {
     super.initState();
-    FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
-      setState(() {
-        trainers = snap.docs;
-      });
-    });
+    // TODO: Implement with your API
+    // YourApiService.getTrainersStream().listen((trainers) {
+    //   setState(() {
+    //     this.trainers = trainers;
+    //   });
+    // });
   }
 
   void _addMembership() {
-    FirebaseFirestore.instance.collection("memberships").add({
-      "imageUrl": _imageUrl.text,
-      "tag": _tag.text,
-      "classes": _classes.text,
-      "type": _type.text,
-      "title": _title.text,
-      "price": _price.text,
-      "features": _features.text.split(","),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-      "isPurchased": false,
-      "date": selectedDate ?? "",
-      "location": _location.text.trim(),
-    });
+    // TODO: Implement with your API
+    // await YourApiService.createMembership({
+    //   "imageUrl": _imageUrl.text,
+    //   "tag": _tag.text,
+    //   "classes": _classes.text,
+    //   "type": _type.text,
+    //   "title": _title.text,
+    //   "price": _price.text,
+    //   "features": _features.text.split(","),
+    //   "mentor": selectedTrainer ?? "No Trainer Assigned",
+    //   "isPurchased": false,
+    //   "date": selectedDate ?? "",
+    //   "location": _location.text.trim(),
+    // });
 
     _imageUrl.clear();
     _tag.clear();
@@ -113,7 +114,8 @@ class _MembershipCarouselManagerState
   }
 
   void _delete(String id) {
-    FirebaseFirestore.instance.collection("memberships").doc(id).delete();
+    // TODO: Implement with your API
+    // await YourApiService.deleteMembership(id);
   }
 
   @override
@@ -126,19 +128,19 @@ class _MembershipCarouselManagerState
           _inputForm(),
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.5,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection("memberships").snapshots(),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Stream.value([]), // TODO: Replace with YourApiService.getMembershipsStream()
               builder: (context, snap) {
                 if (!snap.hasData) return Center(child: CircularProgressIndicator());
-                final docs = snap.data!.docs;
+                final docs = snap.data!;
 
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, i) {
                     final d = docs[i];
                     return ListTile(
-                      title: Text(d['title']),
-                      subtitle: Text("Type: ${d['type']} | Trainer: ${d['mentor']}"),
+                      title: Text(d['title'] ?? ''),
+                      subtitle: Text("Type: ${d['type'] ?? ''} | Trainer: ${d['mentor'] ?? ''}"),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -149,8 +151,8 @@ class _MembershipCarouselManagerState
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => PurchaseListScreen(
-                                    cardId: d.id,
-                                    cardTitle: d["title"],
+                                    cardId: d['id'] ?? '',
+                                    cardTitle: d["title"] ?? '',
                                   ),
                                 ),
                               );
@@ -158,7 +160,7 @@ class _MembershipCarouselManagerState
                           ),
                           IconButton(
                             icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _delete(d.id),
+                            onPressed: () => _delete(d['id'] ?? ''),
                           ),
                         ],
                       ),
@@ -227,8 +229,8 @@ class _MembershipCarouselManagerState
             underline: SizedBox(),
             items: trainers.map((t) {
               return DropdownMenuItem<String>(
-                value: t["name"],
-                child: Text(t["name"]),
+                value: t["name"] ?? '',
+                child: Text(t["name"] ?? ''),
               );
             }).toList(),
             onChanged: (value) {
@@ -279,32 +281,34 @@ class _FitnessMembershipCardManagerState
   final _location = TextEditingController();
 
   String? selectedTrainer;
-  List<DocumentSnapshot> trainers = [];
+  List<Map<String, dynamic>> trainers = [];
   String? selectedDate;
 
   @override
   void initState() {
     super.initState();
-    FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
-      setState(() {
-        trainers = snap.docs;
-      });
-    });
+    // TODO: Implement with your API
+    // YourApiService.getTrainersStream().listen((trainers) {
+    //   setState(() {
+    //     this.trainers = trainers;
+    //   });
+    // });
   }
 
   void _addCard() {
-    FirebaseFirestore.instance.collection("membershipcards").add({
-      "imageUrl": _imageUrl.text.trim(),
-      "category": _category.text.trim(),
-      "price": _price.text.trim(),
-      "title": _title.text.trim(),
-      "subtitle": _subtitle.text.trim(),
-      "description": _description.text.trim(),
-      "duration": _duration.text.trim(),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-      "date": selectedDate ?? "",
-      "location": _location.text.trim(),
-    });
+    // TODO: Implement with your API
+    // await YourApiService.createMembershipCard({
+    //   "imageUrl": _imageUrl.text.trim(),
+    //   "category": _category.text.trim(),
+    //   "price": _price.text.trim(),
+    //   "title": _title.text.trim(),
+    //   "subtitle": _subtitle.text.trim(),
+    //   "description": _description.text.trim(),
+    //   "duration": _duration.text.trim(),
+    //   "mentor": selectedTrainer ?? "No Trainer Assigned",
+    //   "date": selectedDate ?? "",
+    //   "location": _location.text.trim(),
+    // });
 
     _imageUrl.clear();
     _category.clear();
@@ -317,7 +321,8 @@ class _FitnessMembershipCardManagerState
   }
 
   void _delete(String id) {
-    FirebaseFirestore.instance.collection("membershipcards").doc(id).delete();
+    // TODO: Implement with your API
+    // await YourApiService.deleteMembershipCard(id);
   }
 
   @override
@@ -330,19 +335,19 @@ class _FitnessMembershipCardManagerState
           _inputForm(),
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.5,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection("membershipcards").snapshots(),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Stream.value([]), // TODO: Replace with YourApiService.getMembershipCardsStream()
               builder: (context, snap) {
                 if (!snap.hasData) return Center(child: CircularProgressIndicator());
-                final docs = snap.data!.docs;
+                final docs = snap.data!;
 
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, i) {
                     final d = docs[i];
                     return ListTile(
-                      title: Text(d['title']),
-                      subtitle: Text("Category: ${d['category']} | Trainer: ${d['mentor']}"),
+                      title: Text(d['title'] ?? ''),
+                      subtitle: Text("Category: ${d['category'] ?? ''} | Trainer: ${d['mentor'] ?? ''}"),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -353,8 +358,8 @@ class _FitnessMembershipCardManagerState
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => PurchaseListScreen(
-                                    cardId: d.id,
-                                    cardTitle: d["title"],
+                                    cardId: d['id'] ?? '',
+                                    cardTitle: d["title"] ?? '',
                                   ),
                                 ),
                               );
@@ -362,7 +367,7 @@ class _FitnessMembershipCardManagerState
                           ),
                           IconButton(
                             icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _delete(d.id),
+                            onPressed: () => _delete(d['id'] ?? ''),
                           ),
                         ],
                       ),
@@ -431,8 +436,8 @@ class _FitnessMembershipCardManagerState
             underline: SizedBox(),
             items: trainers.map((t) {
               return DropdownMenuItem<String>(
-                value: t["name"],
-                child: Text(t["name"]),
+                value: t["name"] ?? '',
+                child: Text(t["name"] ?? ''),
               );
             }).toList(),
             onChanged: (value) {

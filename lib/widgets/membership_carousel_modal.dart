@@ -1,6 +1,11 @@
-import 'package:Outbox/services/review_service.dart';
-import 'package:flutter/material.dart';
+import 'package:Outbox/models/cart_model.dart';
 import 'package:Outbox/models/membership_model.dart';
+import 'package:Outbox/providers/cart_provider.dart';
+import 'package:Outbox/services/purchase_status_service.dart';
+import 'package:Outbox/services/review_service.dart';
+import 'package:Outbox/widgets/review_widget.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class MembershipCarouselModal extends StatelessWidget {
   final MembershipCarouselData data;
@@ -347,6 +352,146 @@ class MembershipCarouselModal extends StatelessWidget {
                       const SizedBox(height: 20),
                     ],
                   ),
+                ),
+              ),
+              // Add to Cart / Purchased Button Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: FutureBuilder<bool>(
+                  future: PurchaseStatusService.isPurchased(data.id),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return SizedBox(
+                        height: 90,
+                        child: Center(child: CircularProgressIndicator(color: titleColor)),
+                      );
+                    }
+
+                    final purchased = snapshot.data!;
+                    final cartItems = Provider.of<CartProvider>(context).items;
+                    final isInCart = cartItems.any((item) => item.id == data.id);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          height: 45,
+                          child: purchased
+                              ? Container(
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    "Purchased",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                )
+                              : isInCart
+                                  ? Container(
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE0F7E9),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Text(
+                                        "Added",
+                                        style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    )
+                                  : ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF1A73E8),
+                                        foregroundColor: Colors.white,
+                                        textStyle: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.3,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        Provider.of<CartProvider>(context, listen: false).addItem(
+                                          CartItem(
+                                            id: data.id,
+                                            title: data.title,
+                                            imageUrl: data.imageUrl.isNotEmpty
+                                                ? data.imageUrl
+                                                : 'assets/default_thumbnail.webp',
+                                            price: int.parse(data.price),
+                                            type: "membership_carousel",
+                                          ),
+                                        );
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text("${data.title} added to cart")),
+                                        );
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text("Add to Cart"),
+                                    ),
+                        ),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          height: 36,
+                          child: purchased
+                              ? TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    showDialog(
+                                      context: context,
+                                      builder: (dialogContext) {
+                                        return Dialog(
+                                          insetPadding:
+                                              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20)),
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(maxWidth: 380),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(20),
+                                              child: SingleChildScrollView(
+                                                child: SafeArea(
+                                                  child: ReviewWidget(cardId: data.id),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: const Text(
+                                    "Give your review",
+                                    style: TextStyle(
+                                      color: Colors.pinkAccent,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
+                              : isInCart
+                                  ? TextButton(
+                                      onPressed: () {
+                                        Provider.of<CartProvider>(context, listen: false)
+                                            .removeItem(data.id);
+                                      },
+                                      child: const Text(
+                                        "Remove",
+                                        style: TextStyle(
+                                          color: Colors.redAccent,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               // Close button at bottom

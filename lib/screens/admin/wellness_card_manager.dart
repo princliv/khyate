@@ -1,6 +1,5 @@
 import 'package:Outbox/screens/purchase_list_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:khyate_b2b/screens/purchase_list_screen.dart';
 
 class WellnessCardManager extends StatefulWidget {
@@ -19,17 +18,17 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
   final _date = TextEditingController();
 
   String? selectedTrainer;  
-  List<DocumentSnapshot> trainers = [];
+  List<Map<String, dynamic>> trainers = [];
 
   @override
   void initState() {
     super.initState();
-
-    FirebaseFirestore.instance.collection("trainers").snapshots().listen((snap) {
-      setState(() {
-        trainers = snap.docs;
-      });
-    });
+    // TODO: Implement with your API
+    // YourApiService.getTrainersStream().listen((trainers) {
+    //   setState(() {
+    //     this.trainers = trainers;
+    //   });
+    // });
   }
 
   // ⭐⭐⭐ DATE PICKER FUNCTION
@@ -49,17 +48,18 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
   }
 
   void _addWellnessCard() {
-    FirebaseFirestore.instance.collection("wellnesscards").add({
-      "imageUrl": _imageUrl.text.trim(),
-      "title": _title.text.trim(),
-      "subtitle": _subtitle.text.trim(),
-      "description": _description.text.trim(),
-      "category": _category.text.trim(),
-      "duration": _duration.text.trim(),
-      "mentor": selectedTrainer ?? "No Trainer Assigned",
-      "price": _price.text.trim(),
-      "date": _date.text.trim(), 
-    });
+    // TODO: Implement with your API
+    // await YourApiService.createWellnessCard({
+    //   "imageUrl": _imageUrl.text.trim(),
+    //   "title": _title.text.trim(),
+    //   "subtitle": _subtitle.text.trim(),
+    //   "description": _description.text.trim(),
+    //   "category": _category.text.trim(),
+    //   "duration": _duration.text.trim(),
+    //   "mentor": selectedTrainer ?? "No Trainer Assigned",
+    //   "price": _price.text.trim(),
+    //   "date": _date.text.trim(), 
+    // });
 
     _imageUrl.clear();
     _title.clear();
@@ -75,7 +75,8 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
   }
 
   void _delete(String id) {
-    FirebaseFirestore.instance.collection("wellnesscards").doc(id).delete();
+    // TODO: Implement with your API
+    // await YourApiService.deleteWellnessCard(id);
   }
 
   @override
@@ -84,12 +85,12 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
       children: [
         _inputForm(),
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection("wellnesscards").snapshots(),
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: Stream.value([]), // TODO: Replace with YourApiService.getWellnessCardsStream()
             builder: (context, snap) {
               if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
-              final docs = snap.data!.docs;
+              final docs = snap.data!;
 
               return ListView.builder(
                 itemCount: docs.length,
@@ -97,8 +98,8 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                   final d = docs[i];
 
                   return ListTile(
-                    title: Text(d['title']),
-                    subtitle: Text("${d['category']} • ${d['duration']} • 👤 ${d['mentor']}"),
+                    title: Text(d['title'] ?? ''),
+                    subtitle: Text("${d['category'] ?? ''} • ${d['duration'] ?? ''} • 👤 ${d['mentor'] ?? ''}"),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -109,8 +110,8 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => PurchaseListScreen(
-                                  cardId: d.id,
-                                  cardTitle: d["title"],
+                                  cardId: d['id'] ?? '',
+                                  cardTitle: d["title"] ?? '',
                                 ),
                               ),
                             );
@@ -118,7 +119,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                         ),
                         IconButton(
                           icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _delete(d.id),
+                          onPressed: () => _delete(d['id'] ?? ''),
                         ),
                       ],
                     ),
@@ -178,8 +179,8 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
               underline: SizedBox(),
               items: trainers.map((t) {
                 return DropdownMenuItem<String>(
-                  value: t["name"],
-                  child: Text(t["name"]),
+                  value: t["name"] ?? '',
+                  child: Text(t["name"] ?? ''),
                 );
               }).toList(),
               onChanged: (value) {

@@ -28,7 +28,7 @@ MembershipCarouselData({
   required this.location,   // <-- NEW
 });
 
-factory MembershipCarouselData.fromFirestore(Map<String, dynamic> json, String id) {
+factory MembershipCarouselData.fromJson(Map<String, dynamic> json, String id) {
   return MembershipCarouselData(
     id: id,
     imageUrl: json["imageUrl"] ?? "",

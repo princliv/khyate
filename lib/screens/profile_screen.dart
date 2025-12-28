@@ -1,8 +1,6 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -180,47 +178,21 @@ int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
   }
 
 Future<void> loadProfile() async {
-  final user = FirebaseAuth.instance.currentUser;
-  final uid = user?.uid;
-
-  if (uid != null) {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data = doc.data();
-
-    // Now it's safe to read data
-    profileImageUrl.text = data?['profileImage'] ?? '';
-
-    if (data != null) {
-      firstName.text = data['firstName'] ?? '';
-      lastName.text = data['lastName'] ?? '';
-      email.text = data['email'] ?? '';
-      birthday.text = data['birthday'] ?? '';
-      gender.text = data['gender'] ?? '';
-      emiratesId.text = data['emiratesId'] ?? '';
-      address.text = data['address'] ?? '';
-      country.text = data['country'] ?? '';
-      phone.text = data['phone'] ?? '';
-    }
-
-    // Load missing info from Firebase auth
-    if (user != null) {
-      if (firstName.text.isEmpty || lastName.text.isEmpty) {
-        if (user.displayName != null && user.displayName!.isNotEmpty) {
-          final nameParts = user.displayName!.trim().split(' ');
-          if (firstName.text.isEmpty && nameParts.isNotEmpty) {
-            firstName.text = nameParts[0];
-          }
-          if (lastName.text.isEmpty && nameParts.length > 1) {
-            lastName.text = nameParts.sublist(1).join(' ');
-          }
-        }
-      }
-
-      if (email.text.isEmpty && user.email != null && user.email!.isNotEmpty) {
-        email.text = user.email!;
-      }
-    }
-  }
+  // TODO: Implement with your API
+  // Example:
+  // final user = await YourApiService.getCurrentUser();
+  // if (user != null) {
+  //   profileImageUrl.text = user['profileImage'] ?? '';
+  //   firstName.text = user['firstName'] ?? '';
+  //   lastName.text = user['lastName'] ?? '';
+  //   email.text = user['email'] ?? '';
+  //   birthday.text = user['birthday'] ?? '';
+  //   gender.text = user['gender'] ?? '';
+  //   emiratesId.text = user['emiratesId'] ?? '';
+  //   address.text = user['address'] ?? '';
+  //   country.text = user['country'] ?? '';
+  //   phone.text = user['phone'] ?? '';
+  // }
 
   _hydratePhoneForUi();
   _formatEmiratesIdForUi();
@@ -327,20 +299,9 @@ Future<void> loadProfile() async {
   }
 
   Future<bool> _emiratesIdExistsForAnotherUser(String digitsOnly) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return false;
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('users')
-          .where('emiratesId', isEqualTo: digitsOnly)
-          .limit(1)
-          .get();
-      if (snap.docs.isEmpty) return false;
-      // If found but belongs to current user, it's fine
-      return snap.docs.first.id != uid;
-    } catch (_) {
-      return false;
-    }
+    // TODO: Implement with your API
+    // Check if Emirates ID exists for another user
+    return false; // Stub - replace with actual API call
   }
 
   String _getImageUrlWithCacheBuster(String url) {
@@ -357,15 +318,11 @@ Future<void> loadProfile() async {
   }
 
   Future<void> updateSection(Map<String, dynamic> updates) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    // TODO: Implement with your API
     try {
-      // Use set with merge to ensure the document is created if missing and fields persist
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .set(updates, SetOptions(merge: true));
-
+      // Example:
+      // await YourApiService.updateUserProfile(updates);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Profile updated"),

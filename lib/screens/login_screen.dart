@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
@@ -46,30 +44,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   String _getErrorMessage(dynamic error) {
-    if (error is FirebaseAuthException) {
-      switch (error.code) {
-        case 'wrong-password':
-        case 'invalid-credential':
-        case 'user-not-found':
-          return 'Invalid Email or Password';
-        case 'user-disabled':
-          return 'This account has been disabled';
-        case 'too-many-requests':
-          return 'Too many failed attempts. Please try again later';
-        case 'invalid-email':
-          return 'Invalid email address';
-        case 'network-request-failed':
-          return 'Network error. Please check your connection';
-        default:
-          // Remove bracketed content from the message
-          String errorMessage = error.message ?? error.toString();
-          // Remove content in brackets like [firebase/...]
-          errorMessage = errorMessage.replaceAll(RegExp(r'\[.*?\]'), '').trim();
-          // If message is empty after removing brackets, use a generic message
-          return errorMessage.isEmpty ? 'An error occurred. Please try again' : errorMessage;
-      }
-    }
-    // For non-Firebase errors, remove bracketed content
+    // TODO: Update error handling for your API
     String errorMessage = error.toString();
     errorMessage = errorMessage.replaceAll(RegExp(r'\[.*?\]'), '').trim();
     return errorMessage.isEmpty ? 'An error occurred. Please try again' : errorMessage;
@@ -84,11 +59,23 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      await AuthService().signIn(
-          emailController.text, passwordController.text);
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      final result = await AuthService().signIn(
+        emailController.text.trim(),
+        passwordController.text,
+      );
+      
+      if (result != null) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => const HomeScreen())
+        );
+      } else {
+        setState(() {
+          message = 'Login failed. Please try again.';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         message = _getErrorMessage(e);
@@ -98,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 Future<void> resetPassword(String email) async {
   try {
-    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    await AuthService().resetPassword(email);
   } catch (e) {
     throw e.toString();
   }
@@ -111,63 +98,20 @@ Future<void> resetPassword(String email) async {
     });
 
     try {
-      final user = await AuthService().signInWithGoogle();
-      if (user != null) {
-        // Save Google user data to Firestore if not already exists
-        final uid = user.uid;
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        
-        if (!userDoc.exists) {
-          // Parse display name to firstName and lastName
-          String firstName = '';
-          String lastName = '';
-          if (user.displayName != null && user.displayName!.isNotEmpty) {
-            final nameParts = user.displayName!.trim().split(' ');
-            firstName = nameParts.isNotEmpty ? nameParts[0] : '';
-            lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-          }
-          
-          // Save user data to Firestore
-          await FirebaseFirestore.instance.collection('users').doc(uid).set({
-            'firstName': firstName,
-            'lastName': lastName,
-            'email': user.email ?? '',
-            'birthday': '',
-            'gender': '',
-            'emiratesId': '',
-            'address': '',
-            'country': '',
-            'phone': '',
-          }, SetOptions(merge: true));
-        } else {
-          // If document exists, update only firstName, lastName, and email if they're empty
-          final data = userDoc.data();
-          final updates = <String, dynamic>{};
-          
-          if (data?['firstName'] == null || (data?['firstName'] as String).isEmpty) {
-            if (user.displayName != null && user.displayName!.isNotEmpty) {
-              final nameParts = user.displayName!.trim().split(' ');
-              updates['firstName'] = nameParts.isNotEmpty ? nameParts[0] : '';
-              if (nameParts.length > 1) {
-                updates['lastName'] = nameParts.sublist(1).join(' ');
-              }
-            }
-          }
-          
-          if (data?['email'] == null || (data?['email'] as String).isEmpty) {
-            if (user.email != null && user.email!.isNotEmpty) {
-              updates['email'] = user.email;
-            }
-          }
-          
-          if (updates.isNotEmpty) {
-            await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
-          }
-        }
-      }
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      // TODO: Implement Google Sign-In with Firebase
+      // For now, show a message that it needs to be implemented
+      setState(() {
+        message = 'Google Sign-In is not yet implemented. Please use email/password login.';
+        _isLoading = false;
+      });
+      
+      // Uncomment when Google Sign-In is implemented:
+      // final user = await AuthService().signInWithGoogle();
+      // if (user != null) {
+      //   if (!mounted) return;
+      //   Navigator.pushReplacement(
+      //     context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      // }
     } catch (e) {
       setState(() {
         message = _getErrorMessage(e);
@@ -199,10 +143,9 @@ void _showForgotPasswordDialog(BuildContext context) {
           ElevatedButton(
             onPressed: () async {
               try {
-                await FirebaseAuth.instance.sendPasswordResetEmail(
-                  email: emailController.text.trim(),
-                );
+                await AuthService().resetPassword(emailController.text.trim());
 
+                if (!context.mounted) return;
                 Navigator.pop(context);
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -212,9 +155,10 @@ void _showForgotPasswordDialog(BuildContext context) {
                   ),
                 );
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text("Error: $e"),
+                    content: Text("Error: ${e.toString().replaceAll('Exception: ', '')}"),
                     backgroundColor: Colors.red,
                   ),
                 );

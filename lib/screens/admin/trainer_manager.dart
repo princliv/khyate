@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TrainerManager extends StatefulWidget {
   @override
@@ -12,11 +11,12 @@ class _TrainerManagerState extends State<TrainerManager> {
   final _imageUrl = TextEditingController();
 
   void _addTrainer() {
-    FirebaseFirestore.instance.collection("trainers").add({
-      "name": _name.text,
-      "expertise": _expertise.text,
-      "imageUrl": _imageUrl.text,
-    });
+    // TODO: Implement with your API
+    // await YourApiService.createTrainer({
+    //   "name": _name.text,
+    //   "expertise": _expertise.text,
+    //   "imageUrl": _imageUrl.text,
+    // });
 
     _name.clear();
     _expertise.clear();
@@ -24,7 +24,8 @@ class _TrainerManagerState extends State<TrainerManager> {
   }
 
   void _delete(String id) {
-    FirebaseFirestore.instance.collection("trainers").doc(id).delete();
+    // TODO: Implement with your API
+    // await YourApiService.deleteTrainer(id);
   }
 
   @override
@@ -33,12 +34,12 @@ class _TrainerManagerState extends State<TrainerManager> {
       children: [
         _inputForm(),
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection("trainers").snapshots(),
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: Stream.value([]), // TODO: Replace with YourApiService.getTrainersStream()
             builder: (context, snap) {
               if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
-              final docs = snap.data!.docs;
+              final docs = snap.data!;
 
               return ListView.builder(
                 itemCount: docs.length,
@@ -46,13 +47,13 @@ class _TrainerManagerState extends State<TrainerManager> {
                   final d = docs[i];
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: NetworkImage(d['imageUrl']),
+                      backgroundImage: NetworkImage(d['imageUrl'] ?? ''),
                     ),
-                    title: Text(d['name']),
-                    subtitle: Text(d['expertise']),
+                    title: Text(d['name'] ?? ''),
+                    subtitle: Text(d['expertise'] ?? ''),
                     trailing: IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _delete(d.id),
+                      onPressed: () => _delete(d['id'] ?? ''),
                     ),
                   );
                 },

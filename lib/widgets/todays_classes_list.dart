@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:Outbox/widgets/todays_class_modal.dart';
 
 /// Model for Today's Classes
@@ -28,7 +27,7 @@ class TodayClassData {
     this.price,
   });
 
-  factory TodayClassData.fromFirestore(Map<String, dynamic> data, String id) {
+  factory TodayClassData.fromJson(Map<String, dynamic> data, String id) {
     return TodayClassData(
       id: id,
       title: data["title"] ?? "",
@@ -63,37 +62,17 @@ DateTime? parseDDMMYYYY(String dateString) {
   }
 }
 
-/// Fetch today’s classes from both collections
+/// Fetch today's classes from your API
 Future<List<TodayClassData>> fetchTodaysClasses() async {
-final today = DateTime.now();
-final todayStr = "${today.day}-${today.month}-${today.year}"; // matches Firestore
-
-
-  final firestore = FirebaseFirestore.instance;
-
-  final List<TodayClassData> results = [];
-
-  // Fetch memberships
-  final memberships = await firestore
-      .collection('memberships')
-      .where("date", isEqualTo: todayStr)
-      .get();
-
-  for (var doc in memberships.docs) {
-    results.add(TodayClassData.fromFirestore(doc.data(), doc.id));
-  }
-
-  // Fetch membershipcards
-  final membershipcards = await firestore
-      .collection('membershipcards')
-      .where("date", isEqualTo: todayStr)
-      .get();
-
-  for (var doc in membershipcards.docs) {
-    results.add(TodayClassData.fromFirestore(doc.data(), doc.id));
-  }
-
-  return results;
+  // TODO: Implement with your API
+  // Example:
+  // final today = DateTime.now();
+  // final todayStr = "${today.day}-${today.month}-${today.year}";
+  // final memberships = await YourApiService.getMembershipsByDate(todayStr);
+  // final membershipcards = await YourApiService.getMembershipCardsByDate(todayStr);
+  // return [...memberships, ...membershipcards].map((data) => TodayClassData.fromJson(data, data['id'])).toList();
+  
+  return []; // Stub - replace with actual API call
 }
 
 /// Widget for displaying Today's Classes horizontally

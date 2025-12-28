@@ -1,7 +1,6 @@
 import 'package:Outbox/widgets/membership_carousel.dart';
 import 'package:Outbox/widgets/todays_classes_list.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 //import 'package:khyate_b2b/widgets/membership_carousel.dart';
 import '../widgets/fitness_sessions_grid.dart';
@@ -48,18 +47,18 @@ class _FitnessScreenState extends State<FitnessScreen> {
     "OUTCORE": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=400&fit=crop&q=80",
   };
 
-  /// Get all trainers from Firebase
+  /// Get all trainers from your API
   Future<List<String>> getTrainers() async {
-    final snapshot = await FirebaseFirestore.instance.collection('membershipcards').get();
-    final trainers = snapshot.docs.map((doc) => doc['mentor'] as String).toSet().toList();
-    return trainers;
+    // TODO: Implement with your API
+    // Example: return await YourApiService.getTrainers();
+    return []; // Stub - replace with actual API call
   }
 
-  /// Stream of membership cards from Firebase
+  /// Stream of membership cards from your API
   Stream<List<MembershipCardData>> getMembershipsStream() {
-    return FirebaseFirestore.instance.collection('membershipcards').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => MembershipCardData.fromFirestore(doc.data(), doc.id)).toList();
-    });
+    // TODO: Implement with your API
+    // Example: return YourApiService.getMembershipsStream();
+    return Stream.value([]); // Stub - replace with actual API stream
   }
 
   /// Filter memberships

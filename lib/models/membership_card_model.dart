@@ -28,7 +28,7 @@ class MembershipCardData {
   required this.location,   // <-- NEW
 });
 
-factory MembershipCardData.fromFirestore(Map<String, dynamic> data, String id) {
+factory MembershipCardData.fromJson(Map<String, dynamic> data, String id) {
   return MembershipCardData(
     id: id,
     imageUrl: data["imageUrl"] ?? "",

@@ -1,7 +1,5 @@
 import 'package:Outbox/screens/admin_dashboard.dart';
 import 'package:Outbox/screens/profile_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -91,20 +89,14 @@ class _AppShellState extends State<AppShell> {
     _checkAdmin(); // 🔥 fetch admin status
   }
 
-  // ⭐ Fetch isAdmin from Firestore
+  // ⭐ Fetch isAdmin from your API
   Future<void> _checkAdmin() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (uid != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-
-      if (doc.exists && doc.data()!['isAdmin'] == true) {
-        setState(() => _isAdmin = true);
-      }
-    }
+    // TODO: Implement with your API
+    // Example:
+    // final user = await YourApiService.getCurrentUser();
+    // if (user != null && user['isAdmin'] == true) {
+    //   setState(() => _isAdmin = true);
+    // }
   }
 
   // ⭐ Logout confirmation dialog

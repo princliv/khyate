@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -295,160 +293,60 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildHistoryView(BuildContext context, Color textColor, Color subTextColor) {
-    return FutureBuilder<String>(
-      future: Future.value(FirebaseAuth.instance.currentUser?.uid),
-      builder: (context, uidSnapshot) {
-        if (!uidSnapshot.hasData) {
-          return Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-
-        final uid = uidSnapshot.data!;
-        final purchasesRef = FirebaseFirestore.instance
-            .collection("users")
-            .doc(uid)
-            .collection("purchases")
-            .orderBy("purchasedAt", descending: true);
-
-        return StreamBuilder<QuerySnapshot>(
-          stream: purchasesRef.snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: widget.isDarkMode
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.grey.shade100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.history,
-                        size: 80,
-                        color: subTextColor,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "No purchase history",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Your past purchases will appear here",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: subTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final purchases = snapshot.data!.docs;
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: purchases.length,
-              itemBuilder: (context, index) {
-                final item = purchases[index].data() as Map<String, dynamic>;
-
-                return Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: widget.isDarkMode
-                        ? const Color(0xFF1A2332)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      if (!widget.isDarkMode)
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Thumbnail
-                      ClipRRect(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          bottomLeft: Radius.circular(16),
-                        ),
-                        child: Image.network(
-                          item["imageUrl"] ?? '',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (c, e, s) => Container(
-                            width: 120,
-                            height: 120,
-                            color: widget.isDarkMode
-                                ? Colors.white10
-                                : Colors.grey.shade200,
-                            child: Icon(
-                              Icons.image_not_supported,
-                              color: subTextColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item["title"] ?? "",
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "AED ${item["price"] ?? 0}",
-                                style: TextStyle(
-                                  color: widget.isDarkMode
-                                      ? Colors.greenAccent
-                                      : Colors.green,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
+    // TODO: Implement with your API
+    // Example:
+    // return FutureBuilder<List<Map<String, dynamic>>>(
+    //   future: YourApiService.getPurchaseHistory(),
+    //   builder: (context, snapshot) {
+    //     if (snapshot.connectionState == ConnectionState.waiting) {
+    //       return Center(child: CircularProgressIndicator());
+    //     }
+    //     if (!snapshot.hasData || snapshot.data!.isEmpty) {
+    //       return Center(...);
+    //     }
+    //     final purchases = snapshot.data!;
+    //     return ListView.builder(...);
+    //   },
+    // );
+    
+    // Stub implementation - shows empty state
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: widget.isDarkMode
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.history,
+              size: 80,
+              color: subTextColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "No purchase history",
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Your past purchases will appear here",
+            style: TextStyle(
+              fontSize: 16,
+              color: subTextColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,17 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
+// TODO: Replace with your new API purchase status service
 class PurchaseStatusService {
   static Future<bool> isPurchased(String cardId) async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-    final doc = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(uid)
-        .collection("purchases")
-        .doc(cardId)
-        .get();
-
-    return doc.exists;
+    // TODO: Implement with your API
+    // Return false for now - replace with actual API call
+    return false;
   }
 }

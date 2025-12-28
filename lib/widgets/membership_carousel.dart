@@ -5,7 +5,6 @@ import 'package:Outbox/services/purchase_status_service.dart';
 import 'package:Outbox/services/review_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
 import 'package:Outbox/widgets/membership_carousel_modal.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -25,24 +24,20 @@ class MembershipCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('memberships').snapshots(),
+    // TODO: Replace with your API stream
+    return StreamBuilder<List<MembershipCarouselData>>(
+      stream: Stream.value([]), // Stub - replace with YourApiService.getMembershipsStream()
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text("No memberships found"));
         }
 
-        // Map Firestore docs to MembershipCarouselData
-        final items = snapshot.data!.docs.map((doc) {
-          return MembershipCarouselData.fromFirestore(
-            doc.data() as Map<String, dynamic>,
-            doc.id,
-          );
-        }).toList();
+        // Map API data to MembershipCarouselData
+        final items = snapshot.data!;
 
         // Apply filters
         final filteredItems = items.where((card) {
