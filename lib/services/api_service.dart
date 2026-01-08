@@ -21,6 +21,33 @@ class ApiService {
   static Future<void> removeToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    await prefs.remove('user_role_id');
+    await prefs.remove('user_role_name');
+  }
+  
+  // Save user role
+  static Future<void> saveUserRole(int roleId, String roleName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('user_role_id', roleId);
+    await prefs.setString('user_role_name', roleName);
+  }
+  
+  // Get user role ID
+  static Future<int?> getUserRoleId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_role_id');
+  }
+  
+  // Get user role name
+  static Future<String?> getUserRoleName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_role_name');
+  }
+  
+  // Check if user is admin (role_id 1 or 6)
+  static Future<bool> isAdmin() async {
+    final roleId = await getUserRoleId();
+    return roleId == 1 || roleId == 6;
   }
   
   // Get headers with authentication

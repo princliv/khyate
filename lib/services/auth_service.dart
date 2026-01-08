@@ -74,6 +74,7 @@ class AuthService {
   Future<Map<String, dynamic>?> signIn(
     String emailOrPhone,
     String password, {
+    int roleId = 3, // Default to customer role (3), admin = 1
     String? provider, // "google" or "apple"
     String? uid, // Firebase UID if using social auth
   }) async {
@@ -86,26 +87,56 @@ class AuthService {
       };
       
       final response = await ApiService.post(
-        '$baseUrl/auth/login/3', // 3 = customer role
+        '$baseUrl/auth/login/$roleId',
         payload,
         requireAuth: false,
       );
       
       if (response['success'] == true) {
-        final data = response['data'];
-        if (data != null) {
+        // The backend response structure: { statusCode, data: { user, accessToken, ... }, message, success }
+        // ApiService wraps it: { success: true, data: <backend_response> }
+        final backendResponse = response['data'];
+        // Handle both nested structure (backendResponse['data']) and direct structure
+        final actualData = (backendResponse is Map && backendResponse.containsKey('data')) 
+            ? backendResponse['data'] 
+            : backendResponse;
+        
+        if (actualData != null) {
           // Check for different possible token field names
-          final token = data['accessToken'] ?? 
-                       data['access_token'] ?? 
-                       data['token'] ?? 
-                       data['data']?['accessToken'] ??
-                       data['data']?['access_token'];
+          final token = actualData['accessToken'] ?? 
+                       actualData['access_token'] ?? 
+                       actualData['token'];
           
           if (token != null) {
             await ApiService.saveToken(token);
           }
+          
+          // Store user role information - try multiple paths
+          final user = actualData['user'] ?? backendResponse['user'];
+          bool roleSaved = false;
+          
+          if (user != null && user['user_role'] != null) {
+            final userRole = user['user_role'];
+            final roleIdValue = userRole['role_id'];
+            final roleName = userRole['name'] ?? '';
+            
+            // Save role_id and role name if role_id exists
+            if (roleIdValue != null) {
+              final roleIdInt = roleIdValue is int 
+                  ? roleIdValue 
+                  : (int.tryParse(roleIdValue.toString()) ?? 3);
+              await ApiService.saveUserRole(roleIdInt, roleName);
+              roleSaved = true;
+            }
+          }
+          
+          // Fallback: If role wasn't found in response, use the roleId from login parameter
+          if (!roleSaved && roleId != null) {
+            final roleName = roleId == 1 ? 'admin' : (roleId == 3 ? 'customer' : 'user');
+            await ApiService.saveUserRole(roleId, roleName);
+          }
         }
-        return data;
+        return actualData ?? backendResponse;
       } else {
         throw Exception(response['error'] ?? 'Login failed');
       }

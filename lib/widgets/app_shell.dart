@@ -3,6 +3,7 @@ import 'package:Outbox/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../services/api_service.dart';
 // import 'package:khyate_b2b/screens/admin_dashboard.dart';
 // import 'package:khyate_b2b/screens/profile_screen.dart';
 // import 'dashboard_screen.dart'; // ← Create this screen
@@ -89,14 +90,12 @@ class _AppShellState extends State<AppShell> {
     _checkAdmin(); // 🔥 fetch admin status
   }
 
-  // ⭐ Fetch isAdmin from your API
+  // ⭐ Fetch isAdmin from stored role
   Future<void> _checkAdmin() async {
-    // TODO: Implement with your API
-    // Example:
-    // final user = await YourApiService.getCurrentUser();
-    // if (user != null && user['isAdmin'] == true) {
-    //   setState(() => _isAdmin = true);
-    // }
+    final isAdminUser = await ApiService.isAdmin();
+    if (mounted) {
+      setState(() => _isAdmin = isAdminUser);
+    }
   }
 
   // ⭐ Logout confirmation dialog
@@ -246,7 +245,13 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
-  void _onProfilePressed() {
+  void _onProfilePressed() async {
+    // Re-check admin status in case it wasn't set yet
+    final isAdminUser = await ApiService.isAdmin();
+    if (mounted) {
+      setState(() => _isAdmin = isAdminUser);
+    }
+    
     if (_isAdmin) {
       _showAdminOptions();
     } else {

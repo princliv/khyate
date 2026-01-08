@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscurePassword = true;
   bool _isLoading = false;
   String message = '';
+  String? _selectedRole; // 'admin' or 'user'
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -52,6 +53,13 @@ class _LoginScreenState extends State<LoginScreen>
 
   void signIn() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (_selectedRole == null) {
+      setState(() {
+        message = 'Please select a role';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -59,9 +67,13 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
+      // Map role to role_id: admin = 1, user = 3
+      final roleId = _selectedRole == 'admin' ? 1 : 3;
+      
       final result = await AuthService().signIn(
         emailController.text.trim(),
         passwordController.text,
+        roleId: roleId,
       );
       
       if (result != null) {
@@ -318,6 +330,69 @@ void _showForgotPasswordDialog(BuildContext context) {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Role selection dropdown
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _selectedRole == null && message.isNotEmpty
+                                  ? Colors.red.shade300
+                                  : Colors.grey.shade200,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedRole,
+                            decoration: InputDecoration(
+                              labelText: 'Login As',
+                              labelStyle: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 16,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                color: logoColor,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                            ),
+                            hint: Text(
+                              'Select role',
+                              style: TextStyle(color: Colors.grey.shade400),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'user',
+                                child: Text('User'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'admin',
+                                child: Text('Admin'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedRole = value;
+                                message = ''; // Clear error when role is selected
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select a role';
+                              }
+                              return null;
+                            },
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF1A2332),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 20),
 
