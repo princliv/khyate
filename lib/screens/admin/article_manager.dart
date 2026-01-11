@@ -15,8 +15,10 @@ class _ArticleManagerState extends State<ArticleManager> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _authorController = TextEditingController();
+  final _imageUrlController = TextEditingController();
   
   File? _selectedImage;
+  bool _useImageUrl = false;
   bool _isPublished = true;
   List<dynamic> _articles = [];
   bool _isLoading = false;
@@ -175,7 +177,8 @@ class _ArticleManagerState extends State<ArticleManager> {
     setState(() => _isLoading = true);
     try {
       await _adminService.createArticle(
-        image: _selectedImage,
+        image: _useImageUrl ? null : _selectedImage,
+        imageUrl: _useImageUrl ? _imageUrlController.text.trim() : null,
         title: _titleController.text,
         content: _contentController.text,
         author: _authorController.text,
@@ -188,7 +191,11 @@ class _ArticleManagerState extends State<ArticleManager> {
       
       _titleController.clear();
       _contentController.clear();
-      _selectedImage = null;
+      _imageUrlController.clear();
+      setState(() {
+        _selectedImage = null;
+        _useImageUrl = false;
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error creating article: ${e.toString()}')),
@@ -217,28 +224,105 @@ class _ArticleManagerState extends State<ArticleManager> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  // Image Picker
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      height: 150,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
+                  // Toggle between file upload and URL
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<bool>(
+                          title: const Text('Upload File'),
+                          value: false,
+                          groupValue: _useImageUrl,
+                          onChanged: (value) {
+                            setState(() {
+                              _useImageUrl = false;
+                              _imageUrlController.clear();
+                            });
+                          },
+                        ),
                       ),
-                      child: _selectedImage != null
-                          ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                          : const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate, size: 48),
-                                SizedBox(height: 8),
-                                Text('Tap to select image'),
-                              ],
-                            ),
-                    ),
+                      Expanded(
+                        child: RadioListTile<bool>(
+                          title: const Text('Image URL'),
+                          value: true,
+                          groupValue: _useImageUrl,
+                          onChanged: (value) {
+                            setState(() {
+                              _useImageUrl = true;
+                              _selectedImage = null;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  if (!_useImageUrl)
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _selectedImage != null
+                            ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('Tap to select image'),
+                                ],
+                              ),
+                      ),
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _imageUrlController,
+                          decoration: const InputDecoration(
+                            labelText: 'Image URL *',
+                            hintText: 'https://example.com/image.jpg',
+                            prefixIcon: Icon(Icons.link),
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) => setState(() {}), // Refresh to show preview
+                        ),
+                        const SizedBox(height: 8),
+                        if (_imageUrlController.text.isNotEmpty)
+                          Container(
+                            height: 150,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _imageUrlController.text,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.error, size: 48, color: Colors.red),
+                                    SizedBox(height: 8),
+                                    Text('Invalid image URL', style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(child: CircularProgressIndicator());
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _titleController,
@@ -295,6 +379,7 @@ class _ArticleManagerState extends State<ArticleManager> {
     _titleController.dispose();
     _contentController.dispose();
     _authorController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 }

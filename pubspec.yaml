@@ -56,6 +56,8 @@ dependencies:
   google_fonts: ^6.2.1
   http: ^1.1.0
   image_picker: ^1.0.7
+  path_provider: ^2.1.1
+  path: ^1.8.3
   # sms_advanced: ^1.1.0
 
 dev_dependencies:

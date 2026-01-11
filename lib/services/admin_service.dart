@@ -6,7 +6,8 @@ class AdminService {
   
   // 6.1 Create Promo Code
   Future<Map<String, dynamic>?> createPromoCode({
-    required File? image,
+    File? image,
+    String? imageUrl,
     required String code,
     required String discountType,
     required double discountValue,
@@ -28,6 +29,7 @@ class AdminService {
         'validTo': validTo,
         'usageLimit': usageLimit.toString(),
         'isActive': isActive.toString(),
+        if (imageUrl != null && imageUrl.isNotEmpty) 'imageUrl': imageUrl,
       };
       
       final files = image != null ? {'image': image} : null;
@@ -194,7 +196,8 @@ class AdminService {
   
   // 6.7 Create Article
   Future<Map<String, dynamic>?> createArticle({
-    required File? image,
+    File? image,
+    String? imageUrl,
     required String title,
     required String content,
     required String author,
@@ -206,6 +209,7 @@ class AdminService {
         'content': content,
         'author': author,
         'isPublished': isPublished.toString(),
+        if (imageUrl != null && imageUrl.isNotEmpty) 'imageUrl': imageUrl,
       };
       
       final files = image != null ? {'image': image} : null;

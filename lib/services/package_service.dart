@@ -8,7 +8,8 @@ class PackageService {
   // Note: Backend model expects duration as enum ('daily', 'weekly', 'monthly') and numberOfClasses
   // API docs show duration as number, but backend model is the source of truth
   Future<Map<String, dynamic>?> createPackage({
-    required File? image,
+    File? image,
+    String? imageUrl,
     required String name,
     required String description,
     required double price,
@@ -30,6 +31,7 @@ class PackageService {
         'duration': duration.toLowerCase(), // Backend expects enum: 'daily', 'weekly', 'monthly'
         'numberOfClasses': numberOfClasses.toString(), // Backend model field name
         'isActive': isActive.toString(),
+        if (imageUrl != null && imageUrl.isNotEmpty) 'imageUrl': imageUrl,
       };
       
       final files = image != null ? {'image': image} : null;

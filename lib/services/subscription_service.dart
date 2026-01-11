@@ -7,7 +7,8 @@ class SubscriptionService {
   
   // 14.1 Create Subscription
   Future<Map<String, dynamic>?> createSubscription({
-    required File? media,
+    File? media,
+    String? mediaUrl,
     required String name,
     required String categoryId,
     required double price,
@@ -35,6 +36,7 @@ class SubscriptionService {
         'endTime': endTime,
         'Address': addressId, // LocationMaster ObjectId (not JSON)
         'isSingleClass': isSingleClass.toString(),
+        if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
       };
       
       final files = media != null ? {'media': media} : null;

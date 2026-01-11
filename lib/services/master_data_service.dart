@@ -233,7 +233,7 @@ class MasterDataService {
   Future<List<dynamic>> getAllSessions() async {
     try {
       final response = await ApiService.get(
-        '$baseUrl/master/get-all-session',
+        '$baseUrl/master/get-all-sessions',
         requireAuth: false,
       );
       if (response['success'] == true) {
@@ -284,7 +284,7 @@ class MasterDataService {
   Future<List<dynamic>> getAllCategories() async {
     try {
       final response = await ApiService.get(
-        '$baseUrl/master/get-all-category',
+        '$baseUrl/master/get-all-categories',
         requireAuth: false,
       );
       if (response['success'] == true) {

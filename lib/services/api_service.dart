@@ -408,7 +408,7 @@ class ApiService {
               entry.key,
               fileStream,
               fileLength,
-              filename: file.path.split('/').last,
+              filename: file.path.split(Platform.pathSeparator).last,
               contentType: contentType,
             );
             request.files.add(multipartFile);
@@ -433,9 +433,15 @@ class ApiService {
       }
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Extract actual data if backend wraps it in ApiResponse format
+        // Backend returns: { statusCode, data: {...}, message, success }
+        final actualData = (data is Map && data['data'] != null) 
+            ? data['data'] 
+            : data;
+        
         return {
           'success': true,
-          'data': data,
+          'data': actualData,
           'statusCode': response.statusCode,
         };
       } else {
@@ -490,7 +496,7 @@ class ApiService {
               entry.key,
               fileStream,
               fileLength,
-              filename: file.path.split('/').last,
+              filename: file.path.split(Platform.pathSeparator).last,
               contentType: contentType,
             );
             request.files.add(multipartFile);
@@ -515,9 +521,15 @@ class ApiService {
       }
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Extract actual data if backend wraps it in ApiResponse format
+        // Backend returns: { statusCode, data: {...}, message, success }
+        final actualData = (data is Map && data['data'] != null) 
+            ? data['data'] 
+            : data;
+        
         return {
           'success': true,
-          'data': data,
+          'data': actualData,
           'statusCode': response.statusCode,
         };
       } else {
@@ -572,7 +584,7 @@ class ApiService {
               entry.key,
               fileStream,
               fileLength,
-              filename: file.path.split('/').last,
+              filename: file.path.split(Platform.pathSeparator).last,
               contentType: contentType,
             );
             request.files.add(multipartFile);
@@ -597,9 +609,15 @@ class ApiService {
       }
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Extract actual data if backend wraps it in ApiResponse format
+        // Backend returns: { statusCode, data: {...}, message, success }
+        final actualData = (data is Map && data['data'] != null) 
+            ? data['data'] 
+            : data;
+        
         return {
           'success': true,
-          'data': data,
+          'data': actualData,
           'statusCode': response.statusCode,
         };
       } else {

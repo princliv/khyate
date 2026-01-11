@@ -6,7 +6,8 @@ class SubServiceService {
   
   // 4.1 Create Sub Service
   Future<Map<String, dynamic>?> createSubService({
-    required File? image,
+    File? image,
+    String? imageUrl,
     required String name,
     required String serviceTypeId,
     required String groomingDetails,
@@ -16,6 +17,7 @@ class SubServiceService {
         'name': name,
         'serviceTypeId': serviceTypeId,
         'groomingDetails': groomingDetails,
+        if (imageUrl != null && imageUrl.isNotEmpty) 'imageUrl': imageUrl,
       };
       
       final files = image != null ? {'image': image} : null;

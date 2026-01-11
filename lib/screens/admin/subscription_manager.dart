@@ -372,7 +372,7 @@ class _SubscriptionManagerState extends State<SubscriptionManager> {
                     label: 'Category',
                     value: _selectedCategoryId,
                     items: _categories.cast<Map<String, dynamic>>(),
-                    displayText: (cat) => cat['name'] ?? 'Unknown',
+                    displayText: (cat) => cat['cName'] ?? 'Unknown',
                     getValue: (cat) => cat['_id']?.toString() ?? cat['id']?.toString() ?? '',
                     onChanged: (value) {
                       setState(() {

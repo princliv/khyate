@@ -7,7 +7,8 @@ class TrainerService {
   
   // 5.1 Create Trainer
   Future<Map<String, dynamic>?> createTrainer({
-    required File? profileImage,
+    File? profileImage,
+    String? profileImageUrl,
     required String email,
     required String firstName,
     required String lastName,
@@ -91,6 +92,10 @@ class TrainerService {
       
       // Handle serviceProvider - send as JSON string (empty array is valid)
       fields['serviceProvider'] = jsonEncode(serviceProvider);
+      
+      if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+        fields['profileImageUrl'] = profileImageUrl;
+      }
       
       final files = profileImage != null ? {'profile_image': profileImage} : null;
       

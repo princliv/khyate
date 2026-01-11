@@ -24,8 +24,10 @@ class _TrainerManagerState extends State<TrainerManager> {
   final _experienceYearController = TextEditingController();
   final _passwordController = TextEditingController();
   final _emiratesIdController = TextEditingController();
+  final _imageUrlController = TextEditingController();
   
   File? _selectedImage;
+  bool _useImageUrl = false;
   String? _selectedGender;
   String? _selectedExperience; // "EXPERIENCE" or "FRESHER"
   String? _selectedCountry;
@@ -118,7 +120,8 @@ class _TrainerManagerState extends State<TrainerManager> {
     setState(() => _isLoading = true);
     try {
       await _trainerService.createTrainer(
-        profileImage: _selectedImage,
+        profileImage: _useImageUrl ? null : _selectedImage,
+        profileImageUrl: _useImageUrl ? _imageUrlController.text.trim() : null,
         email: _emailController.text,
         firstName: _firstNameController.text,
         lastName: _lastNameController.text,
@@ -545,42 +548,134 @@ class _TrainerManagerState extends State<TrainerManager> {
               const SizedBox(height: 24),
               const Divider(),
               const SizedBox(height: 24),
-            // Image Picker
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300, width: 2),
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.grey.shade50,
+            // Toggle between file upload and URL
+            Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<bool>(
+                    title: const Text('Upload File'),
+                    value: false,
+                    groupValue: _useImageUrl,
+                    onChanged: (value) {
+                      setState(() {
+                        _useImageUrl = false;
+                        _imageUrlController.clear();
+                      });
+                    },
+                  ),
                 ),
-                child: _selectedImage != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.file(_selectedImage!, fit: BoxFit.cover),
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.add_photo_alternate, size: 48, color: Colors.blue),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Tap to select profile image',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-              ),
+                Expanded(
+                  child: RadioListTile<bool>(
+                    title: const Text('Image URL'),
+                    value: true,
+                    groupValue: _useImageUrl,
+                    onChanged: (value) {
+                      setState(() {
+                        _useImageUrl = true;
+                        _selectedImage = null;
+                      });
+                    },
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            if (!_useImageUrl)
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300, width: 2),
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.grey.shade50,
+                  ),
+                  child: _selectedImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.file(_selectedImage!, fit: BoxFit.cover),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.add_photo_alternate, size: 48, color: Colors.blue),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Tap to select profile image',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _imageUrlController,
+                    decoration: InputDecoration(
+                      labelText: 'Profile Image URL *',
+                      hintText: 'https://example.com/image.jpg',
+                      prefixIcon: const Icon(Icons.link, color: Colors.grey),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue, width: 2),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    ),
+                    onChanged: (value) => setState(() {}), // Refresh to show preview
+                  ),
+                  const SizedBox(height: 8),
+                  if (_imageUrlController.text.isNotEmpty)
+                    Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300, width: 2),
+                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.grey.shade50,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.network(
+                          _imageUrlController.text,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error, size: 48, color: Colors.red),
+                              SizedBox(height: 8),
+                              Text('Invalid image URL', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(child: CircularProgressIndicator());
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             const SizedBox(height: 24),
             // Personal Information Section
             _buildSectionHeader('Personal Information', Icons.person),
@@ -906,6 +1001,7 @@ class _TrainerManagerState extends State<TrainerManager> {
     _specializationController.dispose();
     _experienceYearController.dispose();
     _passwordController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 }
