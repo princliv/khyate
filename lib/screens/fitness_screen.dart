@@ -10,6 +10,10 @@ import '../widgets/fitness_session_modal.dart';
 import '../widgets/membership_modal.dart';
 import '../models/membership_card_model.dart';
 import '../services/notification_service.dart';
+import '../services/subscription_service.dart';
+import '../services/package_service.dart';
+import '../services/trainer_service.dart';
+import '../services/subscription_booking_service.dart';
 
 class FitnessScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -49,16 +53,94 @@ class _FitnessScreenState extends State<FitnessScreen> {
 
   /// Get all trainers from your API
   Future<List<String>> getTrainers() async {
-    // TODO: Implement with your API
-    // Example: return await YourApiService.getTrainers();
-    return []; // Stub - replace with actual API call
+    try {
+      final trainerService = TrainerService();
+      final trainers = await trainerService.getAllTrainers();
+      return trainers.map((trainer) {
+        final firstName = trainer['first_name'] ?? '';
+        final lastName = trainer['last_name'] ?? '';
+        return '$firstName $lastName'.trim();
+      }).where((name) => name.isNotEmpty).toList();
+    } catch (e) {
+      print('Error fetching trainers: $e');
+      return [];
+    }
   }
 
-  /// Stream of membership cards from your API
-  Stream<List<MembershipCardData>> getMembershipsStream() {
-    // TODO: Implement with your API
-    // Example: return YourApiService.getMembershipsStream();
-    return Stream.value([]); // Stub - replace with actual API stream
+  /// Stream of membership cards from API
+  /// Uses API endpoint 14.3: POST /api/v1/subscription/get-all-subscription
+  /// Request body: {page: 1, limit: 50}
+  Stream<List<MembershipCardData>> getMembershipsStream() async* {
+    try {
+      final subscriptionService = SubscriptionService();
+      final subscriptionBookingService = SubscriptionBookingService();
+      
+      // API Endpoint: POST /api/v1/subscription/get-all-subscription
+      // Body: {page, limit, categoryId, sessionTypeId, trainerId}
+      final result = await subscriptionService.getAllSubscriptions(page: 1, limit: 50);
+      final subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+      
+      // Fetch user's purchased subscriptions
+      List<String> purchasedIds = [];
+      try {
+        final bookings = await subscriptionBookingService.getBookingHistory();
+        purchasedIds = bookings.map((booking) {
+          final subId = booking['subscriptionId'] ?? booking['subscription'];
+          if (subId is Map) return subId['_id']?.toString() ?? subId['id']?.toString() ?? '';
+          return subId?.toString() ?? '';
+        }).where((id) => id.isNotEmpty).toList();
+      } catch (e) {
+        print('Error fetching purchased subscriptions: $e');
+      }
+      
+      // Convert subscriptions to MembershipCardData
+      final membershipCards = subscriptions.map<MembershipCardData>((sub) {
+        final id = sub['_id']?.toString() ?? sub['id']?.toString() ?? '';
+        final trainer = sub['trainer'];
+        final trainerName = trainer is Map 
+            ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
+            : trainer?.toString() ?? 'Unknown Trainer';
+        
+        final address = sub['Address'] is Map ? sub['Address'] : {};
+        final location = address['location']?.toString() ?? 
+                        address['addressLine1']?.toString() ?? 
+                        'Location TBD';
+        
+        final dates = sub['date'];
+        String dateStr = '';
+        if (dates is List && dates.isNotEmpty) {
+          dateStr = dates.first?.toString() ?? '';
+        } else if (dates is String) {
+          dateStr = dates;
+        }
+        
+        final category = sub['categoryId'];
+        String categoryName = 'Fitness';
+        if (category is Map) {
+          categoryName = category['name'] ?? 'Fitness';
+        }
+        
+        return MembershipCardData(
+          id: id,
+          title: sub['name'] ?? 'Class',
+          mentor: trainerName,
+          date: dateStr,
+          location: location,
+          imageUrl: sub['media'] ?? sub['imageUrl'] ?? '',
+          price: sub['price']?.toString() ?? '0',
+          description: sub['description'] ?? '',
+          category: categoryName,
+          time: '${sub['startTime'] ?? ''} - ${sub['endTime'] ?? ''}',
+          reviews: '0',
+          isPurchased: purchasedIds.contains(id),
+        );
+      }).toList();
+      
+      yield membershipCards;
+    } catch (e) {
+      print('Error fetching memberships: $e');
+      yield [];
+    }
   }
 
   /// Filter memberships
@@ -318,7 +400,9 @@ const SizedBox(height: 92),
               },
             ),
 
-            /// LATEST PACKAGES CAROUSEL (FILTERED)
+            const SizedBox(height: 40),
+
+            /// FIND YOUR NEW LATEST PACKAGES SECTION
             MembershipCarousel(
               searchQuery: searchQuery,
               selectedTrainer: selectedTrainer,

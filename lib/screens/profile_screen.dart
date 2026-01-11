@@ -8,7 +8,6 @@ import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
 import 'login_screen.dart';
 import 'change_password_screen.dart';
-import 'address_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -1314,18 +1313,6 @@ buildCard(
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
-                      );
-                    },
-                  ),
-                  Divider(color: isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0)),
-                  ListTile(
-                    leading: Icon(Icons.location_on, color: const Color(0xFF21B998)),
-                    title: Text("Manage Addresses", style: TextStyle(color: textColor)),
-                    trailing: Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AddressManagementScreen()),
                       );
                     },
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:Outbox/widgets/todays_class_modal.dart';
+import '../services/subscription_service.dart';
 
 /// Model for Today's Classes
 class TodayClassData {
@@ -64,15 +65,44 @@ DateTime? parseDDMMYYYY(String dateString) {
 
 /// Fetch today's classes from your API
 Future<List<TodayClassData>> fetchTodaysClasses() async {
-  // TODO: Implement with your API
-  // Example:
-  // final today = DateTime.now();
-  // final todayStr = "${today.day}-${today.month}-${today.year}";
-  // final memberships = await YourApiService.getMembershipsByDate(todayStr);
-  // final membershipcards = await YourApiService.getMembershipCardsByDate(todayStr);
-  // return [...memberships, ...membershipcards].map((data) => TodayClassData.fromJson(data, data['id'])).toList();
-  
-  return []; // Stub - replace with actual API call
+  try {
+    final subscriptionService = SubscriptionService();
+    final today = DateTime.now();
+    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    
+    // Fetch subscriptions for today
+    final result = await subscriptionService.getSubscriptionsByDate(date: todayStr);
+    final subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+    
+    // Convert subscriptions to TodayClassData
+    return subscriptions.map<TodayClassData>((sub) {
+      final id = sub['_id']?.toString() ?? sub['id']?.toString() ?? '';
+      final trainer = sub['trainer'];
+      final trainerName = trainer is Map 
+          ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
+          : trainer?.toString() ?? 'Unknown Trainer';
+      
+      final address = sub['Address'] is Map ? sub['Address'] : {};
+      final location = address['location']?.toString() ?? 
+                      address['addressLine1']?.toString() ?? 
+                      'Location TBD';
+      
+      return TodayClassData(
+        id: id,
+        title: sub['name'] ?? 'Class',
+        mentor: trainerName,
+        time: '${sub['startTime'] ?? ''} - ${sub['endTime'] ?? ''}',
+        date: todayStr,
+        location: location,
+        imageUrl: sub['media'] ?? sub['imageUrl'] ?? '',
+        description: sub['description'],
+        price: sub['price']?.toString(),
+      );
+    }).toList();
+  } catch (e) {
+    print('Error fetching today\'s classes: $e');
+    return [];
+  }
 }
 
 /// Widget for displaying Today's Classes horizontally

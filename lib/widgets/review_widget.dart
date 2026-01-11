@@ -59,22 +59,40 @@ class _ReviewWidgetState extends State<ReviewWidget> {
 
         // SUBMIT BUTTON
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             if (rating == 0) {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text("Select rating first")));
               return;
             }
 
-            ReviewService.submitReview(
-              cardId: widget.cardId,
-              rating: rating,
-              comment: commentCtrl.text,
-            );
+            try {
+              await ReviewService.submitReview(
+                cardId: widget.cardId,
+                rating: rating,
+                comment: commentCtrl.text,
+              );
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Review submitted!")),
-            );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Review submitted successfully!")),
+              );
+              
+              // Clear form
+              setState(() {
+                rating = 0;
+                commentCtrl.clear();
+              });
+              
+              // Close dialog if in one
+              Navigator.of(context).pop();
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Error submitting review: ${e.toString()}"),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
           child: Text("Submit Review"),

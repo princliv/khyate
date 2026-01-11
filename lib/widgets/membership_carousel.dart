@@ -7,6 +7,7 @@ import 'package:Outbox/widgets/review_widget.dart';
 import 'package:Outbox/widgets/membership_carousel_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/package_service.dart';
 
 class MembershipCarousel extends StatelessWidget {
   final String searchQuery;
@@ -22,22 +23,78 @@ class MembershipCarousel extends StatelessWidget {
     this.isDarkMode = false,
   });
 
+  /// Fetches packages using API endpoint 15.3: POST /api/v1/package/get-all-packages
+  /// Request body: {page: 1, limit: 50, search: "query"}
+  Future<List<MembershipCarouselData>> _fetchPackages() async {
+    try {
+      final packageService = PackageService();
+      // API Endpoint: POST /api/v1/package/get-all-packages
+      // Body: {page, limit, search}
+      final result = await packageService.getAllPackages(page: 1, limit: 50, search: searchQuery.isEmpty ? null : searchQuery);
+      final packages = result?['packages'] ?? result?['data'] ?? [];
+      
+      return packages.map<MembershipCarouselData>((pkg) {
+        final id = pkg['_id']?.toString() ?? pkg['id']?.toString() ?? '';
+        // Extract duration (daily/weekly/monthly) and numberOfClasses
+        final duration = pkg['duration']?.toString().toLowerCase() ?? 'weekly';
+        final numberOfClasses = pkg['numberOfClasses'] ?? pkg['classesIncluded'] ?? 0;
+        List<String> featuresList = [];
+        if (pkg['features'] is List) {
+          featuresList = (pkg['features'] as List).map((e) => e.toString()).toList();
+        } else if (pkg['description'] != null) {
+          featuresList = [pkg['description'].toString()];
+        }
+        
+        return MembershipCarouselData(
+          id: id,
+          title: pkg['name'] ?? 'Package',
+          type: duration, // Use duration as type (daily/weekly/monthly)
+          tag: duration, // Use duration as tag
+          price: pkg['price']?.toString() ?? '0',
+          mentor: '', // Packages don't have trainers
+          date: '', // Packages don't have specific dates
+          location: '', // Packages don't have locations
+          imageUrl: pkg['image'] ?? pkg['imageUrl'] ?? '',
+          classes: numberOfClasses.toString(),
+          isPurchased: false, // Will be checked by PurchaseStatusService
+          features: featuresList,
+        );
+      }).toList();
+    } catch (e) {
+      print('Error fetching packages: $e');
+      return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // TODO: Replace with your API stream
-    return StreamBuilder<List<MembershipCarouselData>>(
-      stream: Stream.value([]), // Stub - replace with YourApiService.getMembershipsStream()
+    return FutureBuilder<List<MembershipCarouselData>>(
+      future: _fetchPackages(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text("No memberships found"));
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 32),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Find Your New Latest Packages",
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF353535),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Center(child: CircularProgressIndicator()),
+            ],
+          );
         }
 
         // Map API data to MembershipCarouselData
-        final items = snapshot.data!;
+        final items = snapshot.data ?? [];
 
         // Apply filters
         final filteredItems = items.where((card) {
@@ -57,22 +114,41 @@ class MembershipCarousel extends StatelessWidget {
   }
 
   Widget _buildCarousel(List<MembershipCarouselData> items, BuildContext context, bool isDarkMode) {
-    final Color headlineColor = isDarkMode ? const Color(0xFFC5A572) : Colors.black;
+    // Use fitness screen colors: Teal (#21C8B1) for fitness
+    final Color headlineColor = isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF353535);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 32),
-        Text(
+        // Section Title
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
           "Find Your New Latest Packages",
           style: TextStyle(
-            fontSize: 28,
+              fontSize: 32,
             fontWeight: FontWeight.bold,
             color: headlineColor,
           ),
+          ),
         ),
-        const SizedBox(height: 16),
-        SingleChildScrollView(
+        const SizedBox(height: 20),
+        // Show packages or empty state
+        items.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Text(
+                    "No packages available",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                    ),
+                  ),
+                ),
+              )
+            : SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
@@ -89,9 +165,10 @@ class MembershipCarousel extends StatelessWidget {
   }
 
   Widget _buildCard(MembershipCarouselData card, BuildContext context, bool isDarkMode) {
-    final Color cardColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : Colors.black87;
+    final Color cardColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF5F5DC); // Beige/pale background
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF353535);
     final Color subTextColor = isDarkMode ? Colors.white70 : Colors.grey[700]!;
+    final Color accentColor = const Color(0xFF21C8B1); // Teal for Fitness
     
     return Container(
       width: 300,
@@ -102,7 +179,7 @@ class MembershipCarousel extends StatelessWidget {
           MembershipCarouselModal.show(context, card, isDarkMode);
         },
         child: SizedBox(
-          height: 470,
+          height: 520,
           child: Container(
             decoration: BoxDecoration(
               color: cardColor,
@@ -113,7 +190,7 @@ class MembershipCarousel extends StatelessWidget {
             ),
             child: Column(
               children: [
-              /// IMAGE with TAG
+              /// IMAGE with OVERLAY and TAGS
               Stack(
                 children: [
                   ClipRRect(
@@ -121,34 +198,74 @@ class MembershipCarousel extends StatelessWidget {
                     child: card.imageUrl.isNotEmpty
                         ? Image.network(
                             card.imageUrl,
-                            height: 120,
+                            height: 180,
                             width: double.infinity,
                             fit: BoxFit.cover,
                           )
                         : Image.asset(
                             'assets/default_thumbnail.webp',
-                            height: 120,
+                            height: 180,
                             width: double.infinity,
                             fit: BoxFit.cover,
                           ),
                   ),
-                  // Tag positioned at top right corner
-                  Positioned(
-                    top: 8,
-                    right: 8,
+                  // Gradient overlay for better text visibility
+                  Positioned.fill(
                     child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.3),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      ),
+                    ),
+                  ),
+                  // Tags positioned at bottom of image
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    right: 8,
+                    child: Row(
+                      children: [
+                        // Duration tag (daily/weekly/monthly)
+                        Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F1F1),
+                            color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        card.tag,
+                            card.type,
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
+                              color: Color(0xFF353535),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Classes count tag
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${card.classes} Classes',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
                         ),
                       ),
+                      ],
                     ),
                   ),
                 ],
@@ -161,168 +278,70 @@ class MembershipCarousel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
+                  // Package Title
                   Text(
-                    card.type,
+                    card.title,
                     style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        color: textColor),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
 
+                  // Price with "/package" suffix
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          card.title,
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Text(
                         "AED ${card.price}",
-                        style: TextStyle(fontSize: 13, color: subTextColor),
+                          style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "/package",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: subTextColor,
+                        ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
-                  /// DETAILS SECTION - Better organized layout
-                  if (card.mentor.isNotEmpty || card.date.isNotEmpty || card.location.isNotEmpty) ...[
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
+                  // Features List with checkmarks
+                  if (card.features.isNotEmpty) ...[
+                    ...card.features.map((feature) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
                         children: [
-                          // First Row: Date and Location (if available)
-                          if (card.date.isNotEmpty || card.location.isNotEmpty)
-                            Row(
-                              children: [
-                                if (card.date.isNotEmpty)
-                                  Expanded(
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.calendar_today,
-                                          size: 16,
-                                          color: Color(0xFFDF50B7),
+                          Icon(
+                            Icons.check_circle,
+                            size: 18,
+                            color: accentColor,
                                         ),
-                                        const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            card.date,
+                              feature,
                                             style: TextStyle(
-                                              fontSize: 13,
+                                fontSize: 14,
                                               color: textColor,
                                             ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                if (card.date.isNotEmpty && card.location.isNotEmpty)
-                                  const SizedBox(width: 12),
-                                if (card.location.isNotEmpty)
-                                  Expanded(
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.location_on,
-                                          size: 16,
-                                          color: Color(0xFFDF50B7),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            card.location,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: textColor,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          if ((card.date.isNotEmpty || card.location.isNotEmpty) && card.mentor.isNotEmpty)
-                            const SizedBox(height: 10),
-                          // Second Row: Trainer
-                          if (card.mentor.isNotEmpty)
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.person,
-                                  size: 16,
-                                  color: Color(0xFFDF50B7),
                                 ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    card.mentor,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
                             ),
                         ],
                       ),
-                    ),
+                    )),
                     const SizedBox(height: 12),
                   ],
-
-                  // REVIEW AVERAGE
-                  StreamBuilder<double>(
-                    stream: ReviewService.avgRating(card.id),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        final rating = snapshot.data!;
-                        return Row(
-                          children: [
-                            Icon(
-                              rating > 0 ? Icons.star : Icons.star_border,
-                              color: rating > 0 ? Colors.amber : subTextColor,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              rating > 0
-                                  ? "Review: ${rating.toStringAsFixed(1)}"
-                                  : "0 review",
-                              style: TextStyle(color: subTextColor, fontSize: 13),
-                            ),
-                          ],
-                        );
-                      }
-                      return Row(
-                        children: [
-                          Icon(Icons.star_border, color: subTextColor, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            "0 review",
-                            style: TextStyle(color: subTextColor, fontSize: 13),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
 
                       const Spacer(),
 
@@ -428,21 +447,23 @@ class MembershipCarousel extends StatelessWidget {
                             );
                           }
 
-                          // Standardized "Add to Cart" button styling
+                          // "Buy Now" button styling to match image
                           return SizedBox(
                             height: 45,
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1A73E8), // Google blue
+                                backgroundColor: accentColor, // Teal color
                                 foregroundColor: Colors.white,
                                 textStyle: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.3,
+                                  fontSize: 16,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+                                elevation: 2,
                               ),
                               onPressed: () {
                                 cart.addItem(
@@ -457,7 +478,7 @@ class MembershipCarousel extends StatelessWidget {
                                   ),
                                 );
                               },
-                              child: const Text("Add to Cart"),
+                              child: const Text("Buy Now"),
                             ),
                           );
                             },

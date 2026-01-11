@@ -255,7 +255,68 @@ class ReviewService {
     }
   }
   
-  // Legacy methods for compatibility
+  // Get all subscription reviews with average rating
+  Future<Map<String, dynamic>?> getAllSubscriptionReviews({
+    required String subscriptionId,
+  }) async {
+    try {
+      final response = await ApiService.get(
+        '$baseUrl/user/get-all-subscription-rating-review/$subscriptionId',
+        requireAuth: false, // Public endpoint
+      );
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else if (data is Map && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data'] as Map);
+        }
+        return null;
+      } else {
+        throw Exception(response['error'] ?? 'Failed to get reviews');
+      }
+    } catch (e) {
+      throw Exception('Get all subscription reviews error: ${e.toString()}');
+    }
+  }
+  
+  // Get user's review for a subscription
+  Future<Map<String, dynamic>?> getSubscriptionReviewByUser({
+    required String subscriptionId,
+  }) async {
+    try {
+      final response = await ApiService.get(
+        '$baseUrl/user/get-rating-review/$subscriptionId',
+        requireAuth: true,
+      );
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else if (data is Map && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data'] as Map);
+        }
+        // If no review found, backend returns empty object or null
+        return null;
+      } else {
+        // If no review found, return null instead of throwing
+        if (response['error']?.toString().contains('No review') == true) {
+          return null;
+        }
+        throw Exception(response['error'] ?? 'Failed to get user review');
+      }
+    } catch (e) {
+      // If error is about no review found, return null
+      if (e.toString().contains('No review') || e.toString().contains('404')) {
+        return null;
+      }
+      throw Exception('Get user subscription review error: ${e.toString()}');
+    }
+  }
+  
+  // Legacy methods for compatibility - now properly implemented
   static Future<void> submitReview({
     required String cardId,
     required double rating,
@@ -269,13 +330,45 @@ class ReviewService {
     );
   }
 
+  // Get average rating for a subscription/package
   static Stream<double> avgRating(String cardId) {
-    // TODO: Implement with actual API endpoint if available
-    return Stream.value(0.0);
+    return Stream.fromFuture(_getAvgRatingAsync(cardId));
   }
   
+  static Future<double> _getAvgRatingAsync(String cardId) async {
+    try {
+      final service = ReviewService();
+      final result = await service.getAllSubscriptionReviews(subscriptionId: cardId);
+      
+      if (result != null) {
+        final avgRatingStr = result['averageRating']?.toString() ?? '0.0';
+        return double.tryParse(avgRatingStr) ?? 0.0;
+      }
+      return 0.0;
+    } catch (e) {
+      print('Error getting average rating: $e');
+      return 0.0;
+  }
+  }
+  
+  // Get user's review for a subscription/package
   static Future<Map<String, dynamic>?> getUserReview(String cardId) async {
-    // TODO: Implement with actual API endpoint if available
+    try {
+      final service = ReviewService();
+      final review = await service.getSubscriptionReviewByUser(subscriptionId: cardId);
+      
+      if (review != null && review.isNotEmpty) {
+        // Return in expected format
+        return {
+          'rating': review['rating'] ?? 0,
+          'comment': review['review'] ?? review['comment'] ?? '',
+          'review': review['review'] ?? review['comment'] ?? '',
+        };
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user review: $e');
     return null;
+    }
   }
 }

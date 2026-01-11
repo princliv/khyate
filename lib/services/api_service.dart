@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -67,6 +69,27 @@ class ApiService {
     return headers;
   }
   
+  // Helper function to ensure proper Dart Map conversion for Flutter web
+  static Map<String, dynamic> _ensureDartMap(dynamic decoded) {
+    if (decoded is Map) {
+      // Recursively convert nested maps and lists
+      return decoded.map<String, dynamic>((key, value) {
+        if (value is Map) {
+          return MapEntry(key.toString(), _ensureDartMap(value));
+        } else if (value is List) {
+          return MapEntry(key.toString(), value.map((item) {
+            if (item is Map) {
+              return _ensureDartMap(item);
+            }
+            return item;
+          }).toList());
+        }
+        return MapEntry(key.toString(), value);
+      });
+    }
+    return <String, dynamic>{};
+  }
+  
   // POST request
   static Future<Map<String, dynamic>> post(
     String endpoint,
@@ -85,7 +108,8 @@ class ApiService {
       Map<String, dynamic> data;
       
       try {
-        data = jsonDecode(responseBody);
+        final decoded = jsonDecode(responseBody);
+        data = _ensureDartMap(decoded);
       } catch (e) {
         // If response is not JSON, return raw response
         return {
@@ -345,6 +369,270 @@ class ApiService {
         'success': false,
         'error': e.toString(),
       };
+    }
+  }
+  
+  // Multipart POST request for file uploads
+  static Future<Map<String, dynamic>> postMultipart(
+    String endpoint,
+    Map<String, dynamic> fields, {
+    Map<String, File>? files,
+    bool requireAuth = false,
+  }) async {
+    try {
+      final token = requireAuth ? await getToken() : null;
+      
+      var request = http.MultipartRequest('POST', Uri.parse(endpoint));
+      
+      // Add authorization header
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      
+      // Add text fields
+      fields.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+      
+      // Add files
+      if (files != null) {
+        for (var entry in files.entries) {
+          final file = entry.value;
+          if (await file.exists()) {
+            final fileStream = http.ByteStream(file.openRead());
+            final fileLength = await file.length();
+            final contentType = _getContentType(file.path);
+            final multipartFile = http.MultipartFile(
+              entry.key,
+              fileStream,
+              fileLength,
+              filename: file.path.split('/').last,
+              contentType: contentType,
+            );
+            request.files.add(multipartFile);
+          }
+        }
+      }
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      final responseBody = response.body;
+      Map<String, dynamic> data;
+      
+      try {
+        data = jsonDecode(responseBody);
+      } catch (e) {
+        return {
+          'success': false,
+          'error': responseBody.isNotEmpty ? responseBody : 'Invalid response format',
+          'statusCode': response.statusCode,
+        };
+      }
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {
+          'success': true,
+          'data': data,
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? data['error'] ?? data['msg'] ?? 'Request failed',
+          'statusCode': response.statusCode,
+          'data': data,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Multipart PUT request for file uploads
+  static Future<Map<String, dynamic>> putMultipart(
+    String endpoint,
+    Map<String, dynamic> fields, {
+    Map<String, File>? files,
+    bool requireAuth = false,
+  }) async {
+    try {
+      final token = requireAuth ? await getToken() : null;
+      
+      var request = http.MultipartRequest('PUT', Uri.parse(endpoint));
+      
+      // Add authorization header
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      
+      // Add text fields
+      fields.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+      
+      // Add files
+      if (files != null) {
+        for (var entry in files.entries) {
+          final file = entry.value;
+          if (await file.exists()) {
+            final fileStream = http.ByteStream(file.openRead());
+            final fileLength = await file.length();
+            final contentType = _getContentType(file.path);
+            final multipartFile = http.MultipartFile(
+              entry.key,
+              fileStream,
+              fileLength,
+              filename: file.path.split('/').last,
+              contentType: contentType,
+            );
+            request.files.add(multipartFile);
+          }
+        }
+      }
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      final responseBody = response.body;
+      Map<String, dynamic> data;
+      
+      try {
+        data = jsonDecode(responseBody);
+      } catch (e) {
+        return {
+          'success': false,
+          'error': responseBody.isNotEmpty ? responseBody : 'Invalid response format',
+          'statusCode': response.statusCode,
+        };
+      }
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {
+          'success': true,
+          'data': data,
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? data['error'] ?? data['msg'] ?? 'Request failed',
+          'statusCode': response.statusCode,
+          'data': data,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Multipart PATCH request for file uploads
+  static Future<Map<String, dynamic>> patchMultipart(
+    String endpoint,
+    Map<String, dynamic> fields, {
+    Map<String, File>? files,
+    bool requireAuth = false,
+  }) async {
+    try {
+      final token = requireAuth ? await getToken() : null;
+      
+      var request = http.MultipartRequest('PATCH', Uri.parse(endpoint));
+      
+      // Add authorization header
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      
+      // Add text fields
+      fields.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+      
+      // Add files
+      if (files != null) {
+        for (var entry in files.entries) {
+          final file = entry.value;
+          if (await file.exists()) {
+            final fileStream = http.ByteStream(file.openRead());
+            final fileLength = await file.length();
+            final contentType = _getContentType(file.path);
+            final multipartFile = http.MultipartFile(
+              entry.key,
+              fileStream,
+              fileLength,
+              filename: file.path.split('/').last,
+              contentType: contentType,
+            );
+            request.files.add(multipartFile);
+          }
+        }
+      }
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      final responseBody = response.body;
+      Map<String, dynamic> data;
+      
+      try {
+        data = jsonDecode(responseBody);
+      } catch (e) {
+        return {
+          'success': false,
+          'error': responseBody.isNotEmpty ? responseBody : 'Invalid response format',
+          'statusCode': response.statusCode,
+        };
+      }
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {
+          'success': true,
+          'data': data,
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? data['error'] ?? data['msg'] ?? 'Request failed',
+          'statusCode': response.statusCode,
+          'data': data,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Helper method to determine content type from file extension
+  static MediaType _getContentType(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'gif':
+        return MediaType('image', 'gif');
+      case 'webp':
+        return MediaType('image', 'webp');
+      default:
+        return MediaType('image', 'jpeg');
     }
   }
 }

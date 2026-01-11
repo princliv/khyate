@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'api_service.dart';
 
 class UserProfileService {
@@ -30,7 +31,8 @@ class UserProfileService {
     }
   }
   
-  // Update user profile
+  // Update user profile - Note: 2.3 Update User endpoint requires multipart/form-data
+  // This method uses the user/update-user endpoint which may be different from auth/update-account
   Future<Map<String, dynamic>?> updateUserProfile({
     String? firstName,
     String? lastName,
@@ -40,26 +42,28 @@ class UserProfileService {
     String? country,
     String? birthday, // Format: YYYY-MM-DD
     String? gender,
-    String? profileImage,
+    File? profileImage, // Changed from String? to File? for multipart upload
     String? emiratesId,
   }) async {
     try {
-      final payload = <String, dynamic>{};
+      final fields = <String, dynamic>{};
       
-      if (firstName != null) payload['first_name'] = firstName;
-      if (lastName != null) payload['last_name'] = lastName;
-      if (email != null) payload['email'] = email;
-      if (phoneNumber != null) payload['phone_number'] = phoneNumber;
-      if (address != null) payload['address'] = address;
-      if (country != null) payload['country'] = country;
-      if (birthday != null) payload['birthday'] = birthday;
-      if (gender != null) payload['gender'] = gender;
-      if (profileImage != null) payload['profile_image'] = profileImage;
-      if (emiratesId != null) payload['emirates_id'] = emiratesId;
+      if (firstName != null) fields['first_name'] = firstName;
+      if (lastName != null) fields['last_name'] = lastName;
+      if (email != null) fields['email'] = email;
+      if (phoneNumber != null) fields['phone_number'] = phoneNumber;
+      if (address != null) fields['address'] = address;
+      if (country != null) fields['country'] = country;
+      if (birthday != null) fields['birthday'] = birthday;
+      if (gender != null) fields['gender'] = gender;
+      if (emiratesId != null) fields['emirates_id'] = emiratesId;
       
-      final response = await ApiService.put(
+      final files = profileImage != null ? {'profile_image': profileImage} : null;
+      
+      final response = await ApiService.putMultipart(
         '$baseUrl/user/update-user',
-        payload,
+        fields,
+        files: files,
         requireAuth: true,
       );
       

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/address_service.dart';
 import '../services/master_data_service.dart';
+import '../widgets/searchable_dropdown.dart';
 
 class AddressManagementScreen extends StatefulWidget {
   const AddressManagementScreen({super.key});
@@ -109,40 +110,67 @@ class _AddressManagementScreenState extends State<AddressManagementScreen> {
                     decoration: const InputDecoration(labelText: 'Flat No (Optional)'),
                   ),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<Map<String, dynamic>>(
-                    value: selectedCountry,
-                    decoration: const InputDecoration(labelText: 'Country'),
-                    items: _countries.map((country) {
-                      return DropdownMenuItem<Map<String, dynamic>>(
-                        value: country,
-                        child: Text(country['name'] ?? ''),
-                      );
-                    }).toList(),
-                    onChanged: (country) {
+                  // Searchable Country Dropdown
+                  SearchableDropdown<Map<String, dynamic>>(
+                    label: 'Country',
+                    items: _countries.cast<Map<String, dynamic>>(),
+                    value: selectedCountry?['_id']?.toString() ?? selectedCountry?['id']?.toString(),
+                    displayText: (country) => country['name'] ?? '',
+                    getValue: (country) => country['_id']?.toString() ?? country['id']?.toString() ?? '',
+                    onChanged: (value) {
                       setDialogState(() {
-                        selectedCountry = country;
-                        selectedCity = null;
-                        if (country != null) {
-                          _loadCities(country['_id']?.toString() ?? country['id']?.toString() ?? '');
+                        if (value != null && value.isNotEmpty) {
+                          try {
+                            selectedCountry = _countries.firstWhere(
+                              (c) => (c['_id']?.toString() ?? c['id']?.toString()) == value,
+                            ) as Map<String, dynamic>?;
+                            selectedCity = null; // Reset city when country changes
+                            _cities = []; // Clear cities list
+                            _loadCities(value);
+                          } catch (e) {
+                            print('Error finding country: $e');
+                            selectedCountry = null;
+                          }
+                        } else {
+                          selectedCountry = null;
+                          selectedCity = null;
+                          _cities = [];
                         }
                       });
                     },
+                    hintText: 'Select country',
+                    isRequired: true,
                   ),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<Map<String, dynamic>>(
-                    value: selectedCity,
-                    decoration: const InputDecoration(labelText: 'City'),
-                    items: _cities.map((city) {
-                      return DropdownMenuItem<Map<String, dynamic>>(
-                        value: city,
-                        child: Text(city['name'] ?? ''),
-                      );
-                    }).toList(),
-                    onChanged: selectedCountry != null ? (city) {
+                  // Searchable City Dropdown
+                  SearchableDropdown<Map<String, dynamic>>(
+                    label: 'City',
+                    items: _cities.cast<Map<String, dynamic>>(),
+                    value: selectedCity?['_id']?.toString() ?? selectedCity?['id']?.toString(),
+                    displayText: (city) => city['name'] ?? '',
+                    getValue: (city) => city['_id']?.toString() ?? city['id']?.toString() ?? '',
+                    onChanged: selectedCountry != null ? (value) {
                       setDialogState(() {
-                        selectedCity = city;
+                        if (value != null && value.isNotEmpty) {
+                          try {
+                            selectedCity = _cities.firstWhere(
+                              (c) => (c['_id']?.toString() ?? c['id']?.toString()) == value,
+                            ) as Map<String, dynamic>?;
+                          } catch (e) {
+                            print('Error finding city: $e');
+                            selectedCity = null;
+                          }
+                        } else {
+                          selectedCity = null;
+                        }
                       });
-                    } : null,
+                    } : (value) {
+                      // No-op function when country is not selected
+                    },
+                    hintText: selectedCountry == null 
+                        ? 'Please select a country first' 
+                        : 'Select city',
+                    isRequired: true,
                   ),
                   const SizedBox(height: 10),
                   CheckboxListTile(

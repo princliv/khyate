@@ -314,6 +314,36 @@ class MasterDataService {
     }
   }
 
+  // Get All Customer Services
+  // Note: The backend route /user/get-all-services is commented out
+  // This endpoint may not be available. Returning empty list as fallback.
+  Future<List<dynamic>> getAllCustomerServices() async {
+    try {
+      // Try the original endpoint first (in case it gets uncommented)
+      final response = await ApiService.get(
+        '$baseUrl/user/get-all-services',
+        requireAuth: false,
+      );
+      if (response['success'] == true) {
+        return _extractListFromResponse(response);
+      } else {
+        // If endpoint doesn't exist, return empty list instead of throwing error
+        print('Warning: get-all-services endpoint not available. Returning empty list.');
+        return [];
+      }
+    } catch (e) {
+      // If endpoint is not found (404) or route doesn't exist, return empty list
+      if (e.toString().contains('Cannot GET') || 
+          e.toString().contains('404') ||
+          e.toString().contains('not found')) {
+        print('Warning: Customer services endpoint not available. The route may be commented out in the backend.');
+        return [];
+      }
+      // For other errors, still throw to maintain error visibility
+      throw Exception('Get services error: ${e.toString()}');
+    }
+  }
+
   // Get All Roles
   Future<List<dynamic>> getAllRoles({
     int page = 1,

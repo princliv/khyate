@@ -1,9 +1,10 @@
+import 'dart:io';
 import 'api_service.dart';
 
 class AuthService {
   static const String baseUrl = 'http://localhost:5000/api/v1';
   
-  // Register new user
+  // 1.2 Register new user - API endpoint requires multipart/form-data
   Future<Map<String, dynamic>?> signUp({
     required String email,
     required String password,
@@ -16,14 +17,14 @@ class AuthService {
     required String address,
     required String emiratesId,
     required int age,
-    String? profileImage,
+    File? profileImage, // Changed from String? to File? for multipart upload
     String? uid, // Firebase UID if using social auth
   }) async {
     try {
-      final payload = {
+      final fields = {
         'email': email,
         'password': password,
-        'user_role': userRole, // Role ID as number
+        'user_role': userRole.toString(), // Role ID as string
         'first_name': firstName,
         'last_name': lastName,
         'country': country, // Country ID (ObjectId)
@@ -32,13 +33,15 @@ class AuthService {
         'address': address,
         'emirates_id': emiratesId,
         'age': age.toString(), // API expects string
-        if (profileImage != null && profileImage.isNotEmpty) 'profile_image': profileImage,
         if (uid != null && uid.isNotEmpty) 'uid': uid,
       };
       
-      final response = await ApiService.post(
+      final files = profileImage != null ? {'profile_image': profileImage} : null;
+      
+      final response = await ApiService.postMultipart(
         '$baseUrl/auth/register',
-        payload,
+        fields,
+        files: files,
         requireAuth: false, // Registration doesn't need auth
       );
       
@@ -329,25 +332,25 @@ class AuthService {
     }
   }
 
-  // 1.8 Update Account Details
-  // Note: This requires multipart/form-data. For now, we'll support JSON updates
-  // Full multipart support would require additional packages like dio or http multipart
+  // 1.8 Update Account Details - API endpoint requires multipart/form-data
   Future<Map<String, dynamic>?> updateAccountDetails({
     String? firstName,
     String? lastName,
     String? phoneNumber,
-    String? profileImageUrl, // URL if already uploaded
+    File? profileImage, // Changed from String? to File? for multipart upload
   }) async {
     try {
-      final payload = <String, dynamic>{};
-      if (firstName != null) payload['first_name'] = firstName;
-      if (lastName != null) payload['last_name'] = lastName;
-      if (phoneNumber != null) payload['phone_number'] = phoneNumber;
-      if (profileImageUrl != null) payload['profile_image'] = profileImageUrl;
+      final fields = <String, dynamic>{};
+      if (firstName != null) fields['first_name'] = firstName;
+      if (lastName != null) fields['last_name'] = lastName;
+      if (phoneNumber != null) fields['phone_number'] = phoneNumber;
       
-      final response = await ApiService.patch(
+      final files = profileImage != null ? {'profile_image': profileImage} : null;
+      
+      final response = await ApiService.patchMultipart(
         '$baseUrl/auth/update-account',
-        payload,
+        fields,
+        files: files,
         requireAuth: true,
       );
       
@@ -367,13 +370,15 @@ class AuthService {
     }
   }
 
-  // 1.9 Update Cover Image
-  // Note: Requires multipart/form-data - placeholder for now
-  Future<Map<String, dynamic>?> updateCoverImage(String coverImageUrl) async {
+  // 1.9 Update Cover Image - API endpoint requires multipart/form-data
+  Future<Map<String, dynamic>?> updateCoverImage(File coverImage) async {
     try {
-      final response = await ApiService.patch(
+      final files = {'cover_image': coverImage};
+      
+      final response = await ApiService.patchMultipart(
         '$baseUrl/auth/update-cover-image',
-        {'cover_image': coverImageUrl},
+        {},
+        files: files,
         requireAuth: true,
       );
       

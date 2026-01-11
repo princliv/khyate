@@ -1,5 +1,12 @@
 import 'package:Outbox/screens/admin/trainer_manager.dart';
 import 'package:Outbox/screens/admin/wellness_card_manager.dart';
+import 'package:Outbox/screens/admin/subservice_manager.dart';
+import 'package:Outbox/screens/admin/promo_code_manager.dart';
+import 'package:Outbox/screens/admin/article_manager.dart';
+import 'package:Outbox/screens/admin/planner_dashboard_screen.dart';
+import 'package:Outbox/screens/admin/available_groomers_screen.dart';
+import 'package:Outbox/screens/admin/subscription_manager.dart';
+import 'package:Outbox/screens/admin/package_manager.dart';
 import 'package:Outbox/screens/purchase_list_screen.dart';
 import 'package:flutter/material.dart';
 // import 'package:khyate_b2b/screens/admin/trainer_manager.dart';
@@ -22,7 +29,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   @override
   void initState() {
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 11, vsync: this);
     super.initState();
   }
 
@@ -30,15 +37,36 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Admin Dashboard"),
+        title: const Row(
+          children: [
+            Icon(Icons.dashboard, size: 28),
+            SizedBox(width: 12),
+            Text(
+              "Admin Dashboard",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        elevation: 2,
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
-            Tab(text: "Memberships (Carousel)"),
-            Tab(text: "Fitness Cards"),
-            Tab(text: "Wellness Cards"),
-            Tab(text: "Trainers"),
-
+          isScrollable: true,
+          indicatorColor: Colors.blue,
+          labelColor: Colors.blue,
+          unselectedLabelColor: Colors.grey,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          tabs: const [
+            Tab(icon: Icon(Icons.card_membership, size: 20), text: "Memberships"),
+            Tab(icon: Icon(Icons.fitness_center, size: 20), text: "Fitness Cards"),
+            Tab(icon: Icon(Icons.spa, size: 20), text: "Wellness Cards"),
+            Tab(icon: Icon(Icons.person, size: 20), text: "Trainers"),
+            Tab(icon: Icon(Icons.build, size: 20), text: "Sub Services"),
+            Tab(icon: Icon(Icons.local_offer, size: 20), text: "Promo Codes"),
+            Tab(icon: Icon(Icons.article, size: 20), text: "Articles"),
+            Tab(icon: Icon(Icons.subscriptions, size: 20), text: "Subscriptions"),
+            Tab(icon: Icon(Icons.inventory, size: 20), text: "Packages"),
+            Tab(icon: Icon(Icons.calendar_today, size: 20), text: "Planner"),
+            Tab(icon: Icon(Icons.people, size: 20), text: "Groomers"),
           ],
         ),
       ),
@@ -48,8 +76,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           MembershipCarouselManager(),
           FitnessMembershipCardManager(),
           WellnessCardManager(),
-          TrainerManager(), 
-
+          TrainerManager(),
+          SubServiceManager(),
+          PromoCodeManager(),
+          ArticleManager(),
+          SubscriptionManager(),
+          PackageManager(),
+          PlannerDashboardScreen(),
+          AvailableGroomersScreen(),
         ],
       ),
     );
