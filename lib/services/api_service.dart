@@ -131,7 +131,91 @@ class ApiService {
         uri = uri.replace(queryParameters: queryParams);
       }
       
-      final response = await http.get(uri, headers: headers);
+      print('API GET Request: $uri');
+      
+      final response = await http.get(uri, headers: headers).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Request timeout: Server did not respond within 30 seconds');
+        },
+      );
+      
+      print('API Response Status: ${response.statusCode}');
+      print('API Response Body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
+      
+      final responseBody = response.body;
+      Map<String, dynamic> data;
+      
+      try {
+        data = jsonDecode(responseBody);
+      } catch (e) {
+        return {
+          'success': false,
+          'error': responseBody.isNotEmpty ? responseBody : 'Invalid response format',
+          'statusCode': response.statusCode,
+        };
+      }
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {
+          'success': true,
+          'data': data,
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': data['message'] ?? data['error'] ?? data['msg'] ?? 'Request failed',
+          'statusCode': response.statusCode,
+          'data': data,
+        };
+      }
+    } on http.ClientException catch (e) {
+      // Network/connection errors
+      print('Network error: ${e.toString()}');
+      return {
+        'success': false,
+        'error': 'Cannot connect to server. Please ensure the backend is running on http://localhost:5000. Error: ${e.message}',
+      };
+    } on Exception catch (e) {
+      // Timeout and other exceptions
+      print('Request exception: ${e.toString()}');
+      final errorMsg = e.toString();
+      if (errorMsg.contains('Failed host lookup') || 
+          errorMsg.contains('Connection refused') ||
+          errorMsg.contains('Network is unreachable')) {
+        return {
+          'success': false,
+          'error': 'Cannot connect to server. Please ensure the backend server is running on http://localhost:5000',
+        };
+      }
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    } catch (e) {
+      // Catch any other errors
+      print('Unexpected error: ${e.toString()}');
+      return {
+        'success': false,
+        'error': 'Unexpected error: ${e.toString()}',
+      };
+    }
+  }
+  
+  // PUT request
+  static Future<Map<String, dynamic>> put(
+    String endpoint,
+    Map<String, dynamic> body, {
+    bool requireAuth = false,
+  }) async {
+    try {
+      final headers = await getHeaders(includeAuth: requireAuth);
+      final response = await http.put(
+        Uri.parse(endpoint),
+        headers: headers,
+        body: jsonEncode(body),
+      );
       
       final responseBody = response.body;
       Map<String, dynamic> data;
@@ -167,16 +251,16 @@ class ApiService {
       };
     }
   }
-  
-  // PUT request
-  static Future<Map<String, dynamic>> put(
+
+  // PATCH request
+  static Future<Map<String, dynamic>> patch(
     String endpoint,
     Map<String, dynamic> body, {
     bool requireAuth = false,
   }) async {
     try {
       final headers = await getHeaders(includeAuth: requireAuth);
-      final response = await http.put(
+      final response = await http.patch(
         Uri.parse(endpoint),
         headers: headers,
         body: jsonEncode(body),

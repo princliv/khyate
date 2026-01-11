@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/auth_service.dart';
+import '../services/user_profile_service.dart';
 import 'login_screen.dart';
+import 'change_password_screen.dart';
+import 'address_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -178,21 +181,54 @@ int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
   }
 
 Future<void> loadProfile() async {
-  // TODO: Implement with your API
-  // Example:
-  // final user = await YourApiService.getCurrentUser();
-  // if (user != null) {
-  //   profileImageUrl.text = user['profileImage'] ?? '';
-  //   firstName.text = user['firstName'] ?? '';
-  //   lastName.text = user['lastName'] ?? '';
-  //   email.text = user['email'] ?? '';
-  //   birthday.text = user['birthday'] ?? '';
-  //   gender.text = user['gender'] ?? '';
-  //   emiratesId.text = user['emiratesId'] ?? '';
-  //   address.text = user['address'] ?? '';
-  //   country.text = user['country'] ?? '';
-  //   phone.text = user['phone'] ?? '';
-  // }
+  try {
+    final user = await AuthService().getCurrentUser();
+    if (user != null) {
+      // Handle nested data structure
+      final userData = user['data'] ?? user;
+      
+      profileImageUrl.text = userData['profile_image'] ?? '';
+      firstName.text = userData['first_name'] ?? '';
+      lastName.text = userData['last_name'] ?? '';
+      email.text = userData['email'] ?? '';
+      
+      // Handle birthday - could be Date or string
+      if (userData['birthday'] != null) {
+        try {
+          if (userData['birthday'] is String) {
+            birthday.text = userData['birthday'];
+          } else {
+            // If it's a Date object, format it
+            final dateStr = userData['birthday'].toString();
+            birthday.text = dateStr.split('T')[0]; // Extract date part
+          }
+        } catch (e) {
+          birthday.text = '';
+        }
+      }
+      
+      gender.text = userData['gender'] ?? '';
+      emiratesId.text = userData['emirates_id'] ?? '';
+      address.text = userData['address'] ?? '';
+      
+      // Handle country - could be ObjectId or populated object
+      if (userData['country'] != null) {
+        if (userData['country'] is Map) {
+          country.text = userData['country']['name'] ?? '';
+        } else {
+          country.text = userData['country'].toString();
+        }
+      }
+      
+      // Handle phone number
+      if (userData['phone_number'] != null) {
+        phone.text = userData['phone_number'].toString();
+      }
+    }
+  } catch (e) {
+    print('Error loading profile: $e');
+    // Continue with empty fields if API fails
+  }
 
   _hydratePhoneForUi();
   _formatEmiratesIdForUi();
@@ -318,23 +354,40 @@ Future<void> loadProfile() async {
   }
 
   Future<void> updateSection(Map<String, dynamic> updates) async {
-    // TODO: Implement with your API
     try {
-      // Example:
-      // await YourApiService.updateUserProfile(updates);
+      // Convert updates to match API format
+      final profileService = UserProfileService();
       
+      await profileService.updateUserProfile(
+        firstName: updates['first_name'] ?? updates['firstName'],
+        lastName: updates['last_name'] ?? updates['lastName'],
+        email: updates['email'],
+        phoneNumber: updates['phone_number'] ?? updates['phone'],
+        address: updates['address'],
+        country: updates['country'],
+        birthday: updates['birthday'],
+        gender: updates['gender'],
+        profileImage: updates['profile_image'] ?? updates['profileImage'],
+        emiratesId: updates['emirates_id'] ?? updates['emiratesId'],
+      );
+      
+      // Reload profile to get updated data
+      await loadProfile();
+      
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Profile updated"),
+          content: const Text("Profile updated successfully"),
           backgroundColor: const Color(0xFF21B998),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to update profile: $e"),
+          content: Text("Failed to update profile: ${e.toString().replaceAll('Exception: ', '')}"),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -446,7 +499,7 @@ Future<void> loadProfile() async {
                           final newUrl = imageUrlController.text.trim();
                           profileImageUrl.text = newUrl;
                           await updateSection({
-                            "profileImage": newUrl,
+                            "profile_image": newUrl,
                           });
                           if (mounted) {
                             setState(() {
@@ -1146,10 +1199,10 @@ Widget buildPhoneField() {
                         return;
                       }
 
-                      updateSection({
+                      await updateSection({
                         "birthday": birthday.text,
                         "gender": gender.text,
-                        "emiratesId": digitsOnly,
+                        "emirates_id": digitsOnly,
                       });
                       emiratesId.text = formattedDisplay;
                       Navigator.pop(context);
@@ -1247,6 +1300,37 @@ buildCard(
     infoRow("Phone", fullPhone.isNotEmpty ? fullPhone : phone.text, textColor, Icons.phone, isDark),
   ],
 ),
+
+              // SETTINGS & SECURITY
+              buildCard(
+                title: "Settings & Security",
+                isDark: isDark,
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.lock_outline, color: const Color(0xFF21B998)),
+                    title: Text("Change Password", style: TextStyle(color: textColor)),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                      );
+                    },
+                  ),
+                  Divider(color: isDark ? const Color(0xFF3A4555) : const Color(0xFFE2E8F0)),
+                  ListTile(
+                    leading: Icon(Icons.location_on, color: const Color(0xFF21B998)),
+                    title: Text("Manage Addresses", style: TextStyle(color: textColor)),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddressManagementScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
 
             ],
           ),

@@ -14,12 +14,12 @@ class UserProfileService {
       if (response['success'] == true) {
         final data = response['data'];
         // Handle different response structures
-        if (data is Map) {
+        if (data is Map<String, dynamic>) {
           return data;
         } else if (data is Map && data['data'] is Map) {
-          return data['data'];
+          return Map<String, dynamic>.from(data['data'] as Map);
         } else if (data is Map && data['user'] is Map) {
-          return data['user'];
+          return Map<String, dynamic>.from(data['user'] as Map);
         }
         return null;
       } else {
@@ -66,12 +66,12 @@ class UserProfileService {
       if (response['success'] == true) {
         final data = response['data'];
         // Handle different response structures
-        if (data is Map) {
+        if (data is Map<String, dynamic>) {
           return data;
         } else if (data is Map && data['data'] is Map) {
-          return data['data'];
+          return Map<String, dynamic>.from(data['data'] as Map);
         } else if (data is Map && data['user'] is Map) {
-          return data['user'];
+          return Map<String, dynamic>.from(data['user'] as Map);
         }
         return null;
       } else {

@@ -9,34 +9,30 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
-    required String phoneNumber,
-    required String userRole, // "customer" or "trainer"
+    required int userRole, // Role ID: 3 for customer, 2 for trainer
     required String country, // Country ID (ObjectId)
-    required String city,
+    required String city, // City ID (ObjectId)
     required String gender,
     required String address,
     required String emiratesId,
     required int age,
     String? profileImage,
-    String? fitnessGoals,
     String? uid, // Firebase UID if using social auth
   }) async {
     try {
       final payload = {
         'email': email,
         'password': password,
-        'user_role': userRole,
+        'user_role': userRole, // Role ID as number
         'first_name': firstName,
         'last_name': lastName,
-        'phone_number': phoneNumber,
-        'country': country, // This should be country ID (ObjectId)
-        'city': city,
-        'gender': gender,
+        'country': country, // Country ID (ObjectId)
+        'city': city, // City ID (ObjectId)
+        'gender': gender, // Backend expects: "Male", "Female", "Others" (capitalized)
         'address': address,
         'emirates_id': emiratesId,
         'age': age.toString(), // API expects string
         if (profileImage != null && profileImage.isNotEmpty) 'profile_image': profileImage,
-        if (fitnessGoals != null && fitnessGoals.isNotEmpty) 'fitness_goals': fitnessGoals,
         if (uid != null && uid.isNotEmpty) 'uid': uid,
       };
       
@@ -170,7 +166,51 @@ class AuthService {
     }
   }
 
-  // Phone OTP verification
+  // 1.1 Check Email - Get user role by email
+  Future<int?> checkEmail(String email) async {
+    try {
+      final response = await ApiService.post(
+        '$baseUrl/auth/check-email',
+        {'email': email},
+        requireAuth: false,
+      );
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        // Backend returns role_id as number
+        if (data is int) {
+          return data;
+        } else if (data is Map && data['data'] != null) {
+          return int.tryParse(data['data'].toString());
+        } else {
+          return int.tryParse(data.toString());
+        }
+      } else {
+        throw Exception(response['error'] ?? 'Failed to check email');
+      }
+    } catch (e) {
+      throw Exception('Check email error: ${e.toString()}');
+    }
+  }
+
+  // 1.4 Generate OTP
+  Future<void> generateOTP(String emailOrPhone) async {
+    try {
+      final response = await ApiService.post(
+        '$baseUrl/auth/generate-otp',
+        {'emailOrPhone': emailOrPhone},
+        requireAuth: false,
+      );
+      
+      if (response['success'] != true) {
+        throw Exception(response['error'] ?? 'Failed to generate OTP');
+      }
+    } catch (e) {
+      throw Exception('Generate OTP error: ${e.toString()}');
+    }
+  }
+
+  // Phone OTP verification (legacy method - kept for compatibility)
   Future<void> verifyPhoneNumber({
     required String phone,
     required Function(String) codeSent,
@@ -178,59 +218,58 @@ class AuthService {
     required Function(String) onError,
   }) async {
     try {
-      final response = await ApiService.post(
-        '$baseUrl/auth/generate-otp',
-        {'phone': phone},
-        requireAuth: false,
-      );
-      
-      if (response['success'] == true) {
-        // Backend should return verification ID or OTP
-        final data = response['data'];
-        final verificationId = data?['verificationId'] ?? 
-                              data?['verification_id'] ?? 
-                              data?['otpId'] ??
-                              '';
-        if (verificationId.isNotEmpty) {
-          codeSent(verificationId);
-        } else {
-          onError('Verification ID not received from server');
-        }
-      } else {
-        onError(response['error'] ?? 'Failed to send OTP');
-      }
+      await generateOTP(phone);
+      codeSent(phone); // Use phone as verification ID
     } catch (e) {
       onError(e.toString());
     }
   }
 
-  // Sign in with OTP
-  Future<Map<String, dynamic>?> signInWithOTP(String verificationId, String smsCode) async {
+  // 1.5 Verify OTP
+  Future<Map<String, dynamic>?> verifyOTP({
+    required String emailOrPhone,
+    required String otp,
+  }) async {
     try {
       final response = await ApiService.post(
         '$baseUrl/auth/verify-otp',
         {
-          'verificationId': verificationId,
-          'otp': smsCode,
+          'emailOrPhone': emailOrPhone,
+          'otp': otp,
         },
         requireAuth: false,
       );
       
       if (response['success'] == true) {
-        final data = response['data'];
-        if (data != null) {
-          // Check for different possible token field names
-          final token = data['accessToken'] ?? 
-                       data['access_token'] ?? 
-                       data['token'] ?? 
-                       data['data']?['accessToken'] ??
-                       data['data']?['access_token'];
+        final backendResponse = response['data'];
+        
+        // The backend returns: { statusCode: 200, data: "OTP verified", message: "...", success: true }
+        // Extract the actual data from the backend response
+        dynamic actualData;
+        if (backendResponse is Map<String, dynamic>) {
+          actualData = backendResponse['data'] ?? backendResponse;
           
-          if (token != null) {
-            await ApiService.saveToken(token);
+          // Check for accessToken only if the data is a Map (not a string)
+          if (actualData is Map<String, dynamic>) {
+            final token = actualData['accessToken'] ?? 
+                         actualData['access_token'] ?? 
+                         actualData['token'];
+            
+            // Only save token if it's a String (not an int like statusCode)
+            if (token != null && token is String) {
+              await ApiService.saveToken(token);
+            }
           }
+        } else {
+          actualData = backendResponse;
         }
-        return data;
+        
+        // Return a proper Map structure
+        if (actualData is Map<String, dynamic>) {
+          return actualData;
+        } else {
+          return {'message': actualData?.toString() ?? 'OTP verified', 'verified': true};
+        }
       } else {
         throw Exception(response['error'] ?? 'OTP verification failed');
       }
@@ -238,13 +277,24 @@ class AuthService {
       throw Exception('OTP verification error: ${e.toString()}');
     }
   }
+
+  // Sign in with OTP (legacy method - kept for compatibility)
+  Future<Map<String, dynamic>?> signInWithOTP(String verificationId, String smsCode) async {
+    return await verifyOTP(emailOrPhone: verificationId, otp: smsCode);
+  }
   
-  // Reset password
-  Future<void> resetPassword(String email) async {
+  // 1.6 Reset Password
+  Future<void> resetPassword({
+    required String emailOrPhone,
+    required String newPassword,
+  }) async {
     try {
       final response = await ApiService.post(
         '$baseUrl/auth/reset-password',
-        {'email': email},
+        {
+          'emailOrPhone': emailOrPhone,
+          'newPassword': newPassword,
+        },
         requireAuth: false,
       );
       
@@ -253,6 +303,120 @@ class AuthService {
       }
     } catch (e) {
       throw Exception('Reset password error: ${e.toString()}');
+    }
+  }
+
+  // 1.7 Change Password
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await ApiService.post(
+        '$baseUrl/auth/change-password',
+        {
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+        },
+        requireAuth: true,
+      );
+      
+      if (response['success'] != true) {
+        throw Exception(response['error'] ?? 'Failed to change password');
+      }
+    } catch (e) {
+      throw Exception('Change password error: ${e.toString()}');
+    }
+  }
+
+  // 1.8 Update Account Details
+  // Note: This requires multipart/form-data. For now, we'll support JSON updates
+  // Full multipart support would require additional packages like dio or http multipart
+  Future<Map<String, dynamic>?> updateAccountDetails({
+    String? firstName,
+    String? lastName,
+    String? phoneNumber,
+    String? profileImageUrl, // URL if already uploaded
+  }) async {
+    try {
+      final payload = <String, dynamic>{};
+      if (firstName != null) payload['first_name'] = firstName;
+      if (lastName != null) payload['last_name'] = lastName;
+      if (phoneNumber != null) payload['phone_number'] = phoneNumber;
+      if (profileImageUrl != null) payload['profile_image'] = profileImageUrl;
+      
+      final response = await ApiService.patch(
+        '$baseUrl/auth/update-account',
+        payload,
+        requireAuth: true,
+      );
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else if (data is Map && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data'] as Map);
+        }
+        return null;
+      } else {
+        throw Exception(response['error'] ?? 'Failed to update account');
+      }
+    } catch (e) {
+      throw Exception('Update account error: ${e.toString()}');
+    }
+  }
+
+  // 1.9 Update Cover Image
+  // Note: Requires multipart/form-data - placeholder for now
+  Future<Map<String, dynamic>?> updateCoverImage(String coverImageUrl) async {
+    try {
+      final response = await ApiService.patch(
+        '$baseUrl/auth/update-cover-image',
+        {'cover_image': coverImageUrl},
+        requireAuth: true,
+      );
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else if (data is Map && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data'] as Map);
+        }
+        return null;
+      } else {
+        throw Exception(response['error'] ?? 'Failed to update cover image');
+      }
+    } catch (e) {
+      throw Exception('Update cover image error: ${e.toString()}');
+    }
+  }
+
+  // 1.10 Create FCM Token
+  Future<void> createFCMToken({
+    required String userId,
+    required String fcmToken,
+    required String deviceType, // "android" or "ios"
+    required String deviceId,
+  }) async {
+    try {
+      final response = await ApiService.post(
+        '$baseUrl/auth/create-fcm-token',
+        {
+          'user_id': userId,
+          'fcm_token': fcmToken,
+          'device_type': deviceType,
+          'device_id': deviceId,
+        },
+        requireAuth: true,
+      );
+      
+      if (response['success'] != true) {
+        throw Exception(response['error'] ?? 'Failed to create FCM token');
+      }
+    } catch (e) {
+      throw Exception('Create FCM token error: ${e.toString()}');
     }
   }
   

@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
 import 'otp_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -54,21 +55,42 @@ class _LoginScreenState extends State<LoginScreen>
   void signIn() async {
     if (!_formKey.currentState!.validate()) return;
     
-    if (_selectedRole == null) {
-      setState(() {
-        message = 'Please select a role';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       message = '';
     });
 
     try {
-      // Map role to role_id: admin = 1, user = 3
-      final roleId = _selectedRole == 'admin' ? 1 : 3;
+      int? roleId;
+      
+      // If role is not selected, try to auto-detect using checkEmail
+      if (_selectedRole == null) {
+        try {
+          final detectedRoleId = await AuthService().checkEmail(emailController.text.trim());
+          if (detectedRoleId != null) {
+            roleId = detectedRoleId;
+            setState(() {
+              _selectedRole = detectedRoleId == 1 ? 'admin' : 'user';
+            });
+          } else {
+            setState(() {
+              message = 'Please select a role or ensure email is registered';
+              _isLoading = false;
+            });
+            return;
+          }
+        } catch (e) {
+          // If checkEmail fails, require manual role selection
+          setState(() {
+            message = 'Please select a role';
+            _isLoading = false;
+          });
+          return;
+        }
+      } else {
+        // Map role to role_id: admin = 1, user = 3
+        roleId = _selectedRole == 'admin' ? 1 : 3;
+      }
       
       final result = await AuthService().signIn(
         emailController.text.trim(),
@@ -95,14 +117,6 @@ class _LoginScreenState extends State<LoginScreen>
       });
     }
   }
-Future<void> resetPassword(String email) async {
-  try {
-    await AuthService().resetPassword(email);
-  } catch (e) {
-    throw e.toString();
-  }
-}
-
   void googleSignIn() async {
     setState(() {
       _isLoading = true;
@@ -132,55 +146,9 @@ Future<void> resetPassword(String email) async {
     }
   }
 void _showForgotPasswordDialog(BuildContext context) {
-  TextEditingController emailController = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Reset Password"),
-        content: TextField(
-          controller: emailController,
-          decoration: const InputDecoration(
-            hintText: "Enter your registered email",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await AuthService().resetPassword(emailController.text.trim());
-
-                if (!context.mounted) return;
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Password reset email sent"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Error: ${e.toString().replaceAll('Exception: ', '')}"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text("Send"),
-          ),
-        ],
-      );
-    },
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
   );
 }
 

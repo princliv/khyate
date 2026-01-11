@@ -18,7 +18,7 @@ class _OTPScreenState extends State<OTPScreen> {
   void sendCode() async {
     final phone = phoneController.text.trim();
     if (phone.isEmpty) {
-      setState(() => message = 'Please enter your phone number');
+      setState(() => message = 'Please enter your phone number or email');
       return;
     }
 
@@ -26,30 +26,19 @@ class _OTPScreenState extends State<OTPScreen> {
       message = 'Sending OTP...';
     });
 
-    await AuthService().verifyPhoneNumber(
-      phone: phone,
-      codeSent: (id) {
-        setState(() {
-          verificationId = id;
-          message = "OTP sent to $phone";
-        });
-      },
-      onSuccess: (user) {
-        // This won't be called in current implementation, but kept for future use
-        if (user != null && mounted) {
-          Navigator.pushAndRemoveUntil(
-            context, 
-            MaterialPageRoute(builder: (_) => const HomeScreen()), 
-            (_) => false
-          );
-        }
-      },
-      onError: (msg) {
-        setState(() {
-          message = msg;
-        });
-      },
-    );
+    try {
+      await AuthService().generateOTP(phone);
+      setState(() {
+        verificationId = phone; // Use phone/email as identifier
+        message = "OTP sent to $phone";
+      });
+    } catch (e) {
+      setState(() {
+        String errorMsg = e.toString();
+        errorMsg = errorMsg.replaceAll('Exception: ', '');
+        message = errorMsg;
+      });
+    }
   }
 
   void verifyOTP() async {
@@ -68,7 +57,10 @@ class _OTPScreenState extends State<OTPScreen> {
     });
 
     try {
-      final result = await AuthService().signInWithOTP(verificationId!, otpController.text.trim());
+      final result = await AuthService().verifyOTP(
+        emailOrPhone: verificationId!,
+        otp: otpController.text.trim(),
+      );
       if (result != null && mounted) {
         Navigator.pushAndRemoveUntil(
           context, 
@@ -104,7 +96,11 @@ class _OTPScreenState extends State<OTPScreen> {
             if (verificationId == null)
               TextField(
                 controller: phoneController,
-                decoration: const InputDecoration(labelText: "Phone (+123456789)"),
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: "Email or Phone",
+                  hintText: "Enter your email or phone number",
+                ),
               ),
             if (verificationId != null) ...[
               TextField(

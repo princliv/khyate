@@ -109,18 +109,26 @@ class _SignupScreenState extends State<SignupScreen>
   Future<void> _loadCountries() async {
     setState(() {
       _loadingCountries = true;
+      message = ''; // Clear any previous messages
     });
     try {
       final countriesList = await MasterDataService().getAllCountries();
       setState(() {
         countries = countriesList;
         _loadingCountries = false;
+        if (countriesList.isEmpty) {
+          message = 'No countries found. Please contact support.';
+        }
       });
     } catch (e) {
       setState(() {
         _loadingCountries = false;
-        message = 'Failed to load countries: ${e.toString()}';
+        // Clean up error message - remove "Exception: " prefix if present
+        String errorMsg = e.toString().replaceAll('Exception: ', '');
+        message = 'Failed to load countries: $errorMsg';
       });
+      // Also print to console for debugging
+      print('Error loading countries: $e');
     }
   }
 
@@ -294,18 +302,7 @@ class _SignupScreenState extends State<SignupScreen>
         }
       }
 
-      // Check for duplicate phone
-      final normalizedPhone = _normalizePhone(phoneNumber);
-      if (normalizedPhone.isNotEmpty) {
-        final phoneExists = await _checkPhoneDuplicate(normalizedPhone);
-        if (phoneExists) {
-          setState(() {
-            message = 'This phone number is already registered';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
+      // Note: Phone number validation removed as it's not required in backend registration API
 
       // Calculate age from birthday
       int age = 0;
@@ -336,14 +333,13 @@ class _SignupScreenState extends State<SignupScreen>
         return;
       }
 
-      // Get country ID and city name
+      // Get country ID and city ID
       final countryId = selectedCountry!['_id'] ?? selectedCountry!['id'];
-      final cityName = cityController.text.trim();
-
-      // Validate phone number (reuse normalizedPhone from above)
-      if (normalizedPhone.isEmpty) {
+      final cityId = selectedCity!['_id'] ?? selectedCity!['id'];
+      
+      if (cityId == null) {
         setState(() {
-          message = 'Please enter a valid phone number';
+          message = 'Please select a valid city';
           _isLoading = false;
         });
         return;
@@ -352,25 +348,21 @@ class _SignupScreenState extends State<SignupScreen>
       // Remove hyphens from Emirates ID
       final emiratesIdClean = emiratesId.replaceAll('-', '').replaceAll(' ', '');
 
-      // Call API with all required fields
+      // Call API with all required fields matching backend API
       final user = await AuthService().signUp(
         email: emailController.text.trim(),
         password: passwordController.text,
         firstName: firstNameController.text.trim(),
         lastName: lastNameController.text.trim(),
-        phoneNumber: normalizedPhone,
-        userRole: 'customer', // Default to customer role
+        userRole: 3, // Customer role_id is 3
         country: countryId.toString(), // Country ID (ObjectId)
-        city: cityName,
+        city: cityId.toString(), // City ID (ObjectId)
         gender: selectedGender!,
         address: addressController.text.trim().isNotEmpty 
             ? addressController.text.trim() 
             : 'Not provided',
         emiratesId: emiratesIdClean,
         age: age,
-        fitnessGoals: fitnessGoalsController.text.trim().isNotEmpty
-            ? fitnessGoalsController.text.trim()
-            : null,
       );
       
       if (user != null) {
