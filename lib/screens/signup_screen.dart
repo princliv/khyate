@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:country_picker/country_picker.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import '../services/master_data_service.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -74,15 +72,22 @@ class _SignupScreenState extends State<SignupScreen>
   final TextEditingController addressController = TextEditingController();
   final TextEditingController birthdayController = TextEditingController();
   final TextEditingController countryController = TextEditingController();
+  final TextEditingController cityController = TextEditingController();
+  final TextEditingController fitnessGoalsController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   DateTime? birthday;
   String? selectedGender;
-  Country? selectedCountry;
+  Map<String, dynamic>? selectedCountry; // Store country object with ID
+  Map<String, dynamic>? selectedCity; // Store city object
+  List<dynamic> countries = [];
+  List<dynamic> cities = [];
   String phoneNumber = '';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _loadingCountries = false;
+  bool _loadingCities = false;
   String message = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -98,6 +103,54 @@ class _SignupScreenState extends State<SignupScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     _animationController.forward();
+    _loadCountries();
+  }
+
+  Future<void> _loadCountries() async {
+    setState(() {
+      _loadingCountries = true;
+      message = ''; // Clear any previous messages
+    });
+    try {
+      final countriesList = await MasterDataService().getAllCountries();
+      setState(() {
+        countries = countriesList;
+        _loadingCountries = false;
+        if (countriesList.isEmpty) {
+          message = 'No countries found. Please contact support.';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _loadingCountries = false;
+        // Clean up error message - remove "Exception: " prefix if present
+        String errorMsg = e.toString().replaceAll('Exception: ', '');
+        message = 'Failed to load countries: $errorMsg';
+      });
+      // Also print to console for debugging
+      print('Error loading countries: $e');
+    }
+  }
+
+  Future<void> _loadCities(String countryId) async {
+    setState(() {
+      _loadingCities = true;
+      cities = [];
+      selectedCity = null;
+      cityController.clear();
+    });
+    try {
+      final citiesList = await MasterDataService().getCitiesByCountry(countryId);
+      setState(() {
+        cities = citiesList;
+        _loadingCities = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loadingCities = false;
+        message = 'Failed to load cities: ${e.toString()}';
+      });
+    }
   }
 
   @override
@@ -111,6 +164,8 @@ class _SignupScreenState extends State<SignupScreen>
     addressController.dispose();
     birthdayController.dispose();
     countryController.dispose();
+    cityController.dispose();
+    fitnessGoalsController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -166,20 +221,12 @@ class _SignupScreenState extends State<SignupScreen>
   // Check if Emirates ID already exists
   Future<bool> _checkEmiratesIdDuplicate(String emiratesId) async {
     try {
-      // Remove hyphens for comparison (we store without hyphens)
+      // TODO: Implement with your API
+      // Remove hyphens for comparison
       final digitsOnly = emiratesId.replaceAll('-', '');
-      
-      // Check if any user has this Emirates ID (stored without hyphens)
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('emiratesId', isEqualTo: digitsOnly)
-          .limit(1)
-          .get();
-      
-      return querySnapshot.docs.isNotEmpty;
+      // Check if any user has this Emirates ID using your API
+      return false; // Stub - replace with actual API call
     } catch (e) {
-      // If there's an error checking, allow the signup to proceed
-      // (better to allow than block legitimate users)
       return false;
     }
   }
@@ -190,16 +237,11 @@ class _SignupScreenState extends State<SignupScreen>
 
   Future<bool> _checkPhoneDuplicate(String phone) async {
     try {
+      // TODO: Implement with your API
       final normalized = _normalizePhone(phone);
       if (normalized.isEmpty) return false;
-
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('phone', isEqualTo: normalized)
-          .limit(1)
-          .get();
-
-      return querySnapshot.docs.isNotEmpty;
+      // Check if phone exists using your API
+      return false; // Stub - replace with actual API call
     } catch (_) {
       return false;
     }
@@ -214,6 +256,39 @@ class _SignupScreenState extends State<SignupScreen>
     });
 
     try {
+      // Validate required fields
+      if (firstNameController.text.trim().isEmpty) {
+        setState(() {
+          message = 'Please enter your first name';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (lastNameController.text.trim().isEmpty) {
+        setState(() {
+          message = 'Please enter your last name';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (selectedGender == null) {
+        setState(() {
+          message = 'Please select your gender';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (birthday == null) {
+        setState(() {
+          message = 'Please select your birthday';
+          _isLoading = false;
+        });
+        return;
+      }
+
       // Check for duplicate Emirates ID
       final emiratesId = emiratesIdController.text.trim();
       if (emiratesId.isNotEmpty) {
@@ -227,51 +302,87 @@ class _SignupScreenState extends State<SignupScreen>
         }
       }
 
-      // Check for duplicate phone
-      final normalizedPhone = _normalizePhone(phoneNumber);
-      if (normalizedPhone.isNotEmpty) {
-        final phoneExists = await _checkPhoneDuplicate(normalizedPhone);
-        if (phoneExists) {
-          setState(() {
-            message = 'This phone number is already registered';
-            _isLoading = false;
-          });
-          return;
+      // Note: Phone number validation removed as it's not required in backend registration API
+
+      // Calculate age from birthday
+      int age = 0;
+      if (birthday != null) {
+        final today = DateTime.now();
+        age = today.year - birthday!.year;
+        if (today.month < birthday!.month || 
+            (today.month == birthday!.month && today.day < birthday!.day)) {
+          age--;
         }
       }
 
-      final userCredential = await AuthService().signUp(
-        emailController.text,
-        passwordController.text,
-      );
-      final uid = userCredential?.uid;
-      if (uid != null) {
-        // Store Emirates ID with hyphens removed for consistency
-        final emiratesIdStored = emiratesId.replaceAll('-', '');
-        // Store phone in normalized form (digits only) for uniqueness
-        final phoneStored = normalizedPhone;
-        
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'firstName': firstNameController.text,
-          'lastName': lastNameController.text,
-          'email': emailController.text,
-          'birthday': birthday != null ? DateFormat('yyyy-MM-dd').format(birthday!) : '',
-          'gender': selectedGender ?? '',
-          'emiratesId': emiratesIdStored,
-          'address': addressController.text,
-          'country': selectedCountry != null ? selectedCountry!.name : '',
-          'flagEmoji': selectedCountry != null ? selectedCountry!.flagEmoji : '',
-          'phone': phoneStored,
+      // Validate country selection
+      if (selectedCountry == null || selectedCountry!['_id'] == null) {
+        setState(() {
+          message = 'Please select a country';
+          _isLoading = false;
         });
+        return;
+      }
+
+      // Validate city selection
+      if (selectedCity == null || cityController.text.trim().isEmpty) {
+        setState(() {
+          message = 'Please select a city';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Get country ID and city ID
+      final countryId = selectedCountry!['_id'] ?? selectedCountry!['id'];
+      final cityId = selectedCity!['_id'] ?? selectedCity!['id'];
+      
+      if (cityId == null) {
+        setState(() {
+          message = 'Please select a valid city';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Remove hyphens from Emirates ID
+      final emiratesIdClean = emiratesId.replaceAll('-', '').replaceAll(' ', '');
+
+      // Call API with all required fields matching backend API
+      final user = await AuthService().signUp(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+        firstName: firstNameController.text.trim(),
+        lastName: lastNameController.text.trim(),
+        userRole: 3, // Customer role_id is 3
+        country: countryId.toString(), // Country ID (ObjectId)
+        city: cityId.toString(), // City ID (ObjectId)
+        gender: selectedGender!,
+        address: addressController.text.trim().isNotEmpty 
+            ? addressController.text.trim() 
+            : 'Not provided',
+        emiratesId: emiratesIdClean,
+        age: age,
+      );
+      
+      if (user != null) {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
+      } else {
+        setState(() {
+          message = 'Registration failed. Please try again.';
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
-        message = e.toString();
+        // Clean up error message
+        String errorMsg = e.toString();
+        errorMsg = errorMsg.replaceAll('Exception: ', '');
+        message = errorMsg;
         _isLoading = false;
       });
     }
@@ -904,65 +1015,181 @@ class _SignupScreenState extends State<SignupScreen>
                         const SizedBox(height: 20),
 
                         // Country field
-              GestureDetector(
-                onTap: () {
-                  showCountryPicker(
-                    context: context,
-                    showPhoneCode: false,
-                    onSelect: (Country country) {
-                      setState(() {
-                        selectedCountry = country;
-                        countryController.text = '${country.flagEmoji} ${country.name}';
-                      });
-                    },
-                  );
-                },
-                child: AbsorbPointer(
-                            child: TextFormField(
-                    controller: countryController,
-                    decoration: InputDecoration(
-                      labelText: 'Country',
-                                labelStyle: TextStyle(
-                                  color: Colors.grey.shade600,
+                        DropdownButtonFormField<Map<String, dynamic>>(
+                          value: selectedCountry,
+                          decoration: InputDecoration(
+                            labelText: 'Country',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 16,
+                            ),
+                            hintText: _loadingCountries ? 'Loading countries...' : 'Select country',
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                            prefixIcon: Icon(
+                              Icons.flag_outlined,
+                              color: logoColor,
+                            ),
+                            suffixIcon: _loadingCountries
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.arrow_drop_down,
+                                    color: logoColor,
+                                  ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: logoColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          items: countries.map((country) {
+                            final countryName = country['name'] ?? country['country_name'] ?? 'Unknown';
+                            return DropdownMenuItem<Map<String, dynamic>>(
+                              value: country,
+                              child: Text(
+                                countryName,
+                                style: const TextStyle(
+                                  color: Color(0xFF1A2332),
                                   fontSize: 16,
                                 ),
-                      hintText: 'Select country',
-                                hintStyle: TextStyle(color: Colors.grey.shade400),
-                                prefixIcon: Icon(
-                                  Icons.flag_outlined,
-                                  color: logoColor,
-                                ),
-                                suffixIcon: Icon(
-                                  Icons.arrow_drop_down,
-                                  color: logoColor,
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (country) {
+                            if (country != null) {
+                              setState(() {
+                                selectedCountry = country;
+                                countryController.text = country['name'] ?? country['country_name'] ?? '';
+                                // Load cities for selected country
+                                final countryId = country['_id'] ?? country['id'];
+                                if (countryId != null) {
+                                  _loadCities(countryId.toString());
+                                }
+                              });
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a country';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // City field
+                        DropdownButtonFormField<Map<String, dynamic>>(
+                          value: selectedCity,
+                          decoration: InputDecoration(
+                            labelText: 'City',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 16,
+                            ),
+                            hintText: selectedCountry == null
+                                ? 'Select country first'
+                                : _loadingCities
+                                    ? 'Loading cities...'
+                                    : 'Select city',
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                            prefixIcon: Icon(
+                              Icons.location_city_outlined,
+                              color: logoColor,
+                            ),
+                            suffixIcon: _loadingCities
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.arrow_drop_down,
                                     color: logoColor,
-                                    width: 2,
                                   ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: logoColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          items: cities.map((city) {
+                            final cityName = city['name'] ?? city['city_name'] ?? 'Unknown';
+                            return DropdownMenuItem<Map<String, dynamic>>(
+                              value: city,
+                              child: Text(
+                                cityName,
+                                style: const TextStyle(
+                                  color: Color(0xFF1A2332),
+                                  fontSize: 16,
                                 ),
-                    ),
-                  ),
-                ),
-              ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: selectedCountry == null
+                              ? null
+                              : (city) {
+                                  if (city != null) {
+                                    setState(() {
+                                      selectedCity = city;
+                                      cityController.text = city['name'] ?? city['city_name'] ?? '';
+                                    });
+                                  }
+                                },
+                          validator: (value) {
+                            if (selectedCountry == null) {
+                              return 'Please select a country first';
+                            }
+                            if (value == null) {
+                              return 'Please select a city';
+                            }
+                            return null;
+                          },
+                        ),
                         const SizedBox(height: 20),
 
                         // Phone field
@@ -999,10 +1226,58 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                initialCountryCode: selectedCountry?.countryCode ?? 'AE',
+                initialCountryCode: 'AE',
                 onChanged: (phone) => phoneNumber = phone.completeNumber,
                 showCountryFlag: true,
               ),
+                        const SizedBox(height: 20),
+
+                        // Fitness Goals field
+                        TextFormField(
+                          controller: fitnessGoalsController,
+                          textInputAction: TextInputAction.next,
+                          maxLines: 3,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF1A2332),
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Fitness Goals (Optional)',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 16,
+                            ),
+                            hintText: 'Enter your fitness goals...',
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                            prefixIcon: Icon(
+                              Icons.fitness_center_outlined,
+                              color: logoColor,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade200,
+                                width: 1.5,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: logoColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 24),
 
                         // Error message

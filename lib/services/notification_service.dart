@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 //import 'package:khyate_b2b/models/membership_card_model.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'api_service.dart';
 
 class NotificationService {
   NotificationService._();
@@ -156,6 +157,47 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('UTC'));
     }
     _timezoneConfigured = true;
+  }
+
+  // 2.15 Update Notification (API endpoint)
+  static Future<void> updateNotification({
+    required String notificationId,
+    required bool isRead,
+  }) async {
+    try {
+      final response = await ApiService.put(
+        'http://localhost:5000/api/v1/user/update-notification/$notificationId',
+        {'isRead': isRead},
+        requireAuth: true,
+      );
+      
+      if (response['success'] != true) {
+        throw Exception(response['error'] ?? 'Failed to update notification');
+      }
+    } catch (e) {
+      throw Exception('Update notification error: ${e.toString()}');
+    }
+  }
+
+  // Get all notifications from API
+  static Future<List<dynamic>> getAllNotifications() async {
+    try {
+      final response = await ApiService.get(
+        'http://localhost:5000/api/v1/user/get-all-notification',
+        requireAuth: true,
+      );
+      
+      if (response['success'] == true) {
+        final data = response['data'];
+        if (data is List) return data;
+        if (data is Map && data['data'] is List) return data['data'];
+        return [];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to get notifications');
+      }
+    } catch (e) {
+      throw Exception('Get notifications error: ${e.toString()}');
+    }
   }
 }
 

@@ -16,29 +16,66 @@ class _OTPScreenState extends State<OTPScreen> {
   String message = '';
 
   void sendCode() async {
-    final phone = phoneController.text;
-    await AuthService().verifyPhoneNumber(
-      phone: phone,
-      codeSent: (id) {
-        setState(() => verificationId = id);
+    final phone = phoneController.text.trim();
+    if (phone.isEmpty) {
+      setState(() => message = 'Please enter your phone number or email');
+      return;
+    }
+
+    setState(() {
+      message = 'Sending OTP...';
+    });
+
+    try {
+      await AuthService().generateOTP(phone);
+      setState(() {
+        verificationId = phone; // Use phone/email as identifier
         message = "OTP sent to $phone";
-      },
-      onSuccess: (user) {
-        Navigator.pushAndRemoveUntil(
-          context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
-      },
-      onError: (msg) => setState(() => message = msg),
-    );
+      });
+    } catch (e) {
+      setState(() {
+        String errorMsg = e.toString();
+        errorMsg = errorMsg.replaceAll('Exception: ', '');
+        message = errorMsg;
+      });
+    }
   }
 
   void verifyOTP() async {
-    if (verificationId == null) return;
+    if (verificationId == null) {
+      setState(() => message = 'Please send OTP first');
+      return;
+    }
+
+    if (otpController.text.trim().isEmpty) {
+      setState(() => message = 'Please enter the OTP code');
+      return;
+    }
+
+    setState(() {
+      message = 'Verifying OTP...';
+    });
+
     try {
-      await AuthService().signInWithOTP(verificationId!, otpController.text);
-      Navigator.pushAndRemoveUntil(
-        context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+      final result = await AuthService().verifyOTP(
+        emailOrPhone: verificationId!,
+        otp: otpController.text.trim(),
+      );
+      if (result != null && mounted) {
+        Navigator.pushAndRemoveUntil(
+          context, 
+          MaterialPageRoute(builder: (_) => const HomeScreen()), 
+          (_) => false
+        );
+      } else {
+        setState(() => message = 'OTP verification failed. Please try again.');
+      }
     } catch (e) {
-      setState(() => message = e.toString());
+      setState(() {
+        String errorMsg = e.toString();
+        errorMsg = errorMsg.replaceAll('Exception: ', '');
+        message = errorMsg;
+      });
     }
   }
 
@@ -59,7 +96,11 @@ class _OTPScreenState extends State<OTPScreen> {
             if (verificationId == null)
               TextField(
                 controller: phoneController,
-                decoration: const InputDecoration(labelText: "Phone (+123456789)"),
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: "Email or Phone",
+                  hintText: "Enter your email or phone number",
+                ),
               ),
             if (verificationId != null) ...[
               TextField(

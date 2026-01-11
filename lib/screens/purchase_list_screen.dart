@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class PurchaseListScreen extends StatefulWidget {
@@ -27,36 +26,16 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
 
   /// Fetch all users who purchased this membership/card
 Future<void> fetchPurchasedUsers() async {
-  final usersSnap = await FirebaseFirestore.instance.collection("users").get();
-
-  List<Map<String, dynamic>> temp = [];
-
-  for (var userDoc in usersSnap.docs) {
-    final userId = userDoc.id;
-
-    final purchaseDoc = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(userId)
-        .collection("purchases")
-        .doc(widget.cardId)   // ✔ check using docId
-        .get();
-
-    if (purchaseDoc.exists) {
-      temp.add({
-        "name": userDoc.data()?["name"] ?? "No Name",
-        "email": userDoc.data()?["email"] ?? "No Email",
-        "userId": userId,
-        "purchaseDate": 
-    (purchaseDoc.data()?["purchasedAt"] is Timestamp)
-        ? (purchaseDoc.data()?["purchasedAt"] as Timestamp).toDate()
-        : "Unknown Date",
-
-      });
-    }
-  }
-
+  // TODO: Implement with your API
+  // Example:
+  // final users = await YourApiService.getUsersWhoPurchased(widget.cardId);
+  // setState(() {
+  //   purchasedUsers = users;
+  //   loading = false;
+  // });
+  
   setState(() {
-    purchasedUsers = temp;
+    purchasedUsers = [];
     loading = false;
   });
 }

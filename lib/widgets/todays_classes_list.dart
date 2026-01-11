@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:Outbox/widgets/todays_class_modal.dart';
+import '../services/subscription_service.dart';
 
 /// Model for Today's Classes
 class TodayClassData {
@@ -28,7 +28,7 @@ class TodayClassData {
     this.price,
   });
 
-  factory TodayClassData.fromFirestore(Map<String, dynamic> data, String id) {
+  factory TodayClassData.fromJson(Map<String, dynamic> data, String id) {
     return TodayClassData(
       id: id,
       title: data["title"] ?? "",
@@ -63,37 +63,46 @@ DateTime? parseDDMMYYYY(String dateString) {
   }
 }
 
-/// Fetch today’s classes from both collections
+/// Fetch today's classes from your API
 Future<List<TodayClassData>> fetchTodaysClasses() async {
-final today = DateTime.now();
-final todayStr = "${today.day}-${today.month}-${today.year}"; // matches Firestore
-
-
-  final firestore = FirebaseFirestore.instance;
-
-  final List<TodayClassData> results = [];
-
-  // Fetch memberships
-  final memberships = await firestore
-      .collection('memberships')
-      .where("date", isEqualTo: todayStr)
-      .get();
-
-  for (var doc in memberships.docs) {
-    results.add(TodayClassData.fromFirestore(doc.data(), doc.id));
+  try {
+    final subscriptionService = SubscriptionService();
+    final today = DateTime.now();
+    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    
+    // Fetch subscriptions for today
+    final result = await subscriptionService.getSubscriptionsByDate(date: todayStr);
+    final subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+    
+    // Convert subscriptions to TodayClassData
+    return subscriptions.map<TodayClassData>((sub) {
+      final id = sub['_id']?.toString() ?? sub['id']?.toString() ?? '';
+      final trainer = sub['trainer'];
+      final trainerName = trainer is Map 
+          ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
+          : trainer?.toString() ?? 'Unknown Trainer';
+      
+      final address = sub['Address'] is Map ? sub['Address'] : {};
+      final location = address['location']?.toString() ?? 
+                      address['addressLine1']?.toString() ?? 
+                      'Location TBD';
+      
+      return TodayClassData(
+        id: id,
+        title: sub['name'] ?? 'Class',
+        mentor: trainerName,
+        time: '${sub['startTime'] ?? ''} - ${sub['endTime'] ?? ''}',
+        date: todayStr,
+        location: location,
+        imageUrl: sub['media'] ?? sub['imageUrl'] ?? '',
+        description: sub['description'],
+        price: sub['price']?.toString(),
+      );
+    }).toList();
+  } catch (e) {
+    print('Error fetching today\'s classes: $e');
+    return [];
   }
-
-  // Fetch membershipcards
-  final membershipcards = await firestore
-      .collection('membershipcards')
-      .where("date", isEqualTo: todayStr)
-      .get();
-
-  for (var doc in membershipcards.docs) {
-    results.add(TodayClassData.fromFirestore(doc.data(), doc.id));
-  }
-
-  return results;
 }
 
 /// Widget for displaying Today's Classes horizontally

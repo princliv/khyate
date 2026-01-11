@@ -1,13 +1,13 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/auth_service.dart';
+import '../services/user_profile_service.dart';
 import 'login_screen.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -180,46 +180,53 @@ int _profileImageCacheKey = DateTime.now().millisecondsSinceEpoch;
   }
 
 Future<void> loadProfile() async {
-  final user = FirebaseAuth.instance.currentUser;
-  final uid = user?.uid;
-
-  if (uid != null) {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data = doc.data();
-
-    // Now it's safe to read data
-    profileImageUrl.text = data?['profileImage'] ?? '';
-
-    if (data != null) {
-      firstName.text = data['firstName'] ?? '';
-      lastName.text = data['lastName'] ?? '';
-      email.text = data['email'] ?? '';
-      birthday.text = data['birthday'] ?? '';
-      gender.text = data['gender'] ?? '';
-      emiratesId.text = data['emiratesId'] ?? '';
-      address.text = data['address'] ?? '';
-      country.text = data['country'] ?? '';
-      phone.text = data['phone'] ?? '';
-    }
-
-    // Load missing info from Firebase auth
+  try {
+    final user = await AuthService().getCurrentUser();
     if (user != null) {
-      if (firstName.text.isEmpty || lastName.text.isEmpty) {
-        if (user.displayName != null && user.displayName!.isNotEmpty) {
-          final nameParts = user.displayName!.trim().split(' ');
-          if (firstName.text.isEmpty && nameParts.isNotEmpty) {
-            firstName.text = nameParts[0];
+      // Handle nested data structure
+      final userData = user['data'] ?? user;
+      
+      profileImageUrl.text = userData['profile_image'] ?? '';
+      firstName.text = userData['first_name'] ?? '';
+      lastName.text = userData['last_name'] ?? '';
+      email.text = userData['email'] ?? '';
+      
+      // Handle birthday - could be Date or string
+      if (userData['birthday'] != null) {
+        try {
+          if (userData['birthday'] is String) {
+            birthday.text = userData['birthday'];
+          } else {
+            // If it's a Date object, format it
+            final dateStr = userData['birthday'].toString();
+            birthday.text = dateStr.split('T')[0]; // Extract date part
           }
-          if (lastName.text.isEmpty && nameParts.length > 1) {
-            lastName.text = nameParts.sublist(1).join(' ');
-          }
+        } catch (e) {
+          birthday.text = '';
         }
       }
-
-      if (email.text.isEmpty && user.email != null && user.email!.isNotEmpty) {
-        email.text = user.email!;
+      
+      gender.text = userData['gender'] ?? '';
+      emiratesId.text = userData['emirates_id'] ?? '';
+      address.text = userData['address'] ?? '';
+      
+      // Handle country - could be ObjectId or populated object
+      if (userData['country'] != null) {
+        if (userData['country'] is Map) {
+          country.text = userData['country']['name'] ?? '';
+        } else {
+          country.text = userData['country'].toString();
+        }
+      }
+      
+      // Handle phone number
+      if (userData['phone_number'] != null) {
+        phone.text = userData['phone_number'].toString();
       }
     }
+  } catch (e) {
+    print('Error loading profile: $e');
+    // Continue with empty fields if API fails
   }
 
   _hydratePhoneForUi();
@@ -327,20 +334,9 @@ Future<void> loadProfile() async {
   }
 
   Future<bool> _emiratesIdExistsForAnotherUser(String digitsOnly) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return false;
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('users')
-          .where('emiratesId', isEqualTo: digitsOnly)
-          .limit(1)
-          .get();
-      if (snap.docs.isEmpty) return false;
-      // If found but belongs to current user, it's fine
-      return snap.docs.first.id != uid;
-    } catch (_) {
-      return false;
-    }
+    // TODO: Implement with your API
+    // Check if Emirates ID exists for another user
+    return false; // Stub - replace with actual API call
   }
 
   String _getImageUrlWithCacheBuster(String url) {
@@ -357,16 +353,45 @@ Future<void> loadProfile() async {
   }
 
   Future<void> updateSection(Map<String, dynamic> updates) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(
-            content: const Text("Profile updated"),
-            backgroundColor: const Color(0xFF21B998),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ));
+    try {
+      // Convert updates to match API format
+      final profileService = UserProfileService();
+      
+      await profileService.updateUserProfile(
+        firstName: updates['first_name'] ?? updates['firstName'],
+        lastName: updates['last_name'] ?? updates['lastName'],
+        email: updates['email'],
+        phoneNumber: updates['phone_number'] ?? updates['phone'],
+        address: updates['address'],
+        country: updates['country'],
+        birthday: updates['birthday'],
+        gender: updates['gender'],
+        profileImage: updates['profile_image'] ?? updates['profileImage'],
+        emiratesId: updates['emirates_id'] ?? updates['emiratesId'],
+      );
+      
+      // Reload profile to get updated data
+      await loadProfile();
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Profile updated successfully"),
+          backgroundColor: const Color(0xFF21B998),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to update profile: ${e.toString().replaceAll('Exception: ', '')}"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
@@ -473,7 +498,7 @@ Future<void> loadProfile() async {
                           final newUrl = imageUrlController.text.trim();
                           profileImageUrl.text = newUrl;
                           await updateSection({
-                            "profileImage": newUrl,
+                            "profile_image": newUrl,
                           });
                           if (mounted) {
                             setState(() {
@@ -838,27 +863,16 @@ Widget buildPhoneField() {
             final cleanCode = selectedCountryCode.replaceAll('+', '');
             fullPhone = '+$cleanCode$numberWithoutCode';
 
-            // Lenient validation: only show error if clearly invalid
+            // Strict validation: require exactly 10 digits (common mobile length)
             if (numberWithoutCode.isEmpty) {
+              phoneValid = false;
+              phoneValidationMessage = "Phone number is required";
+            } else if (numberWithoutCode.length != 10) {
+              phoneValid = false;
+              phoneValidationMessage = "Phone number must be 10 digits";
+            } else {
               phoneValid = true;
               phoneValidationMessage = null;
-            } else {
-              // Check basic validity: should be 7-15 digits
-              bool isValidLength = numberWithoutCode.length >= 7 && numberWithoutCode.length <= 15;
-              bool hasOnlyDigits = RegExp(r'^\\d+$').hasMatch(numberWithoutCode);
-
-              if (isValidLength && hasOnlyDigits) {
-                phoneValid = true;
-                phoneValidationMessage = null;
-              } else if (numberWithoutCode.length < 7) {
-                // Too short, but don't show error while typing
-                phoneValid = true;
-                phoneValidationMessage = null;
-              } else {
-                // Clearly invalid (wrong length or has non-digits)
-                phoneValid = false;
-                phoneValidationMessage = "Invalid number format";
-              }
             }
           });
         },
@@ -1184,10 +1198,10 @@ Widget buildPhoneField() {
                         return;
                       }
 
-                      updateSection({
+                      await updateSection({
                         "birthday": birthday.text,
                         "gender": gender.text,
-                        "emiratesId": digitsOnly,
+                        "emirates_id": digitsOnly,
                       });
                       emiratesId.text = formattedDisplay;
                       Navigator.pop(context);
@@ -1245,16 +1259,15 @@ buildCard(
       )
     ],
     onSave: () async {
-      // Final validation before saving
+      // Final validation before saving: require exactly 10 digits
       String numberWithoutCode = phone.text.replaceAll(RegExp(r'[^\d]'), '');
-      bool isNumberValid = numberWithoutCode.length >= 7 && 
-                          numberWithoutCode.length <= 15 &&
+      bool isNumberValid = numberWithoutCode.length == 10 &&
                           RegExp(r'^\d+$').hasMatch(numberWithoutCode);
       
-      if (!isNumberValid && phone.text.isNotEmpty) {
+      if (!isNumberValid) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Please enter a valid phone number"),
+            content: Text("Phone number must be 10 digits"),
             backgroundColor: Colors.red,
           ),
         );
@@ -1286,6 +1299,25 @@ buildCard(
     infoRow("Phone", fullPhone.isNotEmpty ? fullPhone : phone.text, textColor, Icons.phone, isDark),
   ],
 ),
+
+              // SETTINGS & SECURITY
+              buildCard(
+                title: "Settings & Security",
+                isDark: isDark,
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.lock_outline, color: const Color(0xFF21B998)),
+                    title: Text("Change Password", style: TextStyle(color: textColor)),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
 
             ],
           ),

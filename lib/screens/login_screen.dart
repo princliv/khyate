@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
 import 'otp_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscurePassword = true;
   bool _isLoading = false;
   String message = '';
+  String? _selectedRole; // 'admin' or 'user'
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -46,30 +46,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   String _getErrorMessage(dynamic error) {
-    if (error is FirebaseAuthException) {
-      switch (error.code) {
-        case 'wrong-password':
-        case 'invalid-credential':
-        case 'user-not-found':
-          return 'Invalid Email or Password';
-        case 'user-disabled':
-          return 'This account has been disabled';
-        case 'too-many-requests':
-          return 'Too many failed attempts. Please try again later';
-        case 'invalid-email':
-          return 'Invalid email address';
-        case 'network-request-failed':
-          return 'Network error. Please check your connection';
-        default:
-          // Remove bracketed content from the message
-          String errorMessage = error.message ?? error.toString();
-          // Remove content in brackets like [firebase/...]
-          errorMessage = errorMessage.replaceAll(RegExp(r'\[.*?\]'), '').trim();
-          // If message is empty after removing brackets, use a generic message
-          return errorMessage.isEmpty ? 'An error occurred. Please try again' : errorMessage;
-      }
-    }
-    // For non-Firebase errors, remove bracketed content
+    // TODO: Update error handling for your API
     String errorMessage = error.toString();
     errorMessage = errorMessage.replaceAll(RegExp(r'\[.*?\]'), '').trim();
     return errorMessage.isEmpty ? 'An error occurred. Please try again' : errorMessage;
@@ -77,18 +54,62 @@ class _LoginScreenState extends State<LoginScreen>
 
   void signIn() async {
     if (!_formKey.currentState!.validate()) return;
-
+    
     setState(() {
       _isLoading = true;
       message = '';
     });
 
     try {
-      await AuthService().signIn(
-          emailController.text, passwordController.text);
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      int? roleId;
+      
+      // If role is not selected, try to auto-detect using checkEmail
+      if (_selectedRole == null) {
+        try {
+          final detectedRoleId = await AuthService().checkEmail(emailController.text.trim());
+          if (detectedRoleId != null) {
+            roleId = detectedRoleId;
+            setState(() {
+              _selectedRole = detectedRoleId == 1 ? 'admin' : 'user';
+            });
+          } else {
+            setState(() {
+              message = 'Please select a role or ensure email is registered';
+              _isLoading = false;
+            });
+            return;
+          }
+        } catch (e) {
+          // If checkEmail fails, require manual role selection
+          setState(() {
+            message = 'Please select a role';
+            _isLoading = false;
+          });
+          return;
+        }
+      } else {
+        // Map role to role_id: admin = 1, user = 3
+        roleId = _selectedRole == 'admin' ? 1 : 3;
+      }
+      
+      final result = await AuthService().signIn(
+        emailController.text.trim(),
+        passwordController.text,
+        roleId: roleId,
+      );
+      
+      if (result != null) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => const HomeScreen())
+        );
+      } else {
+        setState(() {
+          message = 'Login failed. Please try again.';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         message = _getErrorMessage(e);
@@ -96,14 +117,6 @@ class _LoginScreenState extends State<LoginScreen>
       });
     }
   }
-Future<void> resetPassword(String email) async {
-  try {
-    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-  } catch (e) {
-    throw e.toString();
-  }
-}
-
   void googleSignIn() async {
     setState(() {
       _isLoading = true;
@@ -111,63 +124,20 @@ Future<void> resetPassword(String email) async {
     });
 
     try {
-      final user = await AuthService().signInWithGoogle();
-      if (user != null) {
-        // Save Google user data to Firestore if not already exists
-        final uid = user.uid;
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        
-        if (!userDoc.exists) {
-          // Parse display name to firstName and lastName
-          String firstName = '';
-          String lastName = '';
-          if (user.displayName != null && user.displayName!.isNotEmpty) {
-            final nameParts = user.displayName!.trim().split(' ');
-            firstName = nameParts.isNotEmpty ? nameParts[0] : '';
-            lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-          }
-          
-          // Save user data to Firestore
-          await FirebaseFirestore.instance.collection('users').doc(uid).set({
-            'firstName': firstName,
-            'lastName': lastName,
-            'email': user.email ?? '',
-            'birthday': '',
-            'gender': '',
-            'emiratesId': '',
-            'address': '',
-            'country': '',
-            'phone': '',
-          }, SetOptions(merge: true));
-        } else {
-          // If document exists, update only firstName, lastName, and email if they're empty
-          final data = userDoc.data();
-          final updates = <String, dynamic>{};
-          
-          if (data?['firstName'] == null || (data?['firstName'] as String).isEmpty) {
-            if (user.displayName != null && user.displayName!.isNotEmpty) {
-              final nameParts = user.displayName!.trim().split(' ');
-              updates['firstName'] = nameParts.isNotEmpty ? nameParts[0] : '';
-              if (nameParts.length > 1) {
-                updates['lastName'] = nameParts.sublist(1).join(' ');
-              }
-            }
-          }
-          
-          if (data?['email'] == null || (data?['email'] as String).isEmpty) {
-            if (user.email != null && user.email!.isNotEmpty) {
-              updates['email'] = user.email;
-            }
-          }
-          
-          if (updates.isNotEmpty) {
-            await FirebaseFirestore.instance.collection('users').doc(uid).update(updates);
-          }
-        }
-      }
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      // TODO: Implement Google Sign-In with Firebase
+      // For now, show a message that it needs to be implemented
+      setState(() {
+        message = 'Google Sign-In is not yet implemented. Please use email/password login.';
+        _isLoading = false;
+      });
+      
+      // Uncomment when Google Sign-In is implemented:
+      // final user = await AuthService().signInWithGoogle();
+      // if (user != null) {
+      //   if (!mounted) return;
+      //   Navigator.pushReplacement(
+      //     context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+      // }
     } catch (e) {
       setState(() {
         message = _getErrorMessage(e);
@@ -176,55 +146,9 @@ Future<void> resetPassword(String email) async {
     }
   }
 void _showForgotPasswordDialog(BuildContext context) {
-  TextEditingController emailController = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Reset Password"),
-        content: TextField(
-          controller: emailController,
-          decoration: const InputDecoration(
-            hintText: "Enter your registered email",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await FirebaseAuth.instance.sendPasswordResetEmail(
-                  email: emailController.text.trim(),
-                );
-
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Password reset email sent"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Error: $e"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text("Send"),
-          ),
-        ],
-      );
-    },
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
   );
 }
 
@@ -374,6 +298,69 @@ void _showForgotPasswordDialog(BuildContext context) {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Role selection dropdown
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _selectedRole == null && message.isNotEmpty
+                                  ? Colors.red.shade300
+                                  : Colors.grey.shade200,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedRole,
+                            decoration: InputDecoration(
+                              labelText: 'Login As',
+                              labelStyle: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 16,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                color: logoColor,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                            ),
+                            hint: Text(
+                              'Select role',
+                              style: TextStyle(color: Colors.grey.shade400),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'user',
+                                child: Text('User'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'admin',
+                                child: Text('Admin'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedRole = value;
+                                message = ''; // Clear error when role is selected
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select a role';
+                              }
+                              return null;
+                            },
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF1A2332),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 20),
 

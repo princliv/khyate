@@ -2,8 +2,9 @@ import 'package:Outbox/models/cart_model.dart';
 import 'package:Outbox/providers/cart_provider.dart';
 import 'package:Outbox/services/purchase_status_service.dart';
 import 'package:Outbox/services/review_service.dart';
+import 'package:Outbox/services/subscription_service.dart';
+import 'package:Outbox/services/master_data_service.dart';
 import 'package:Outbox/widgets/review_widget.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 // import 'package:khyate_b2b/models/cart_model.dart';
@@ -14,11 +15,63 @@ import 'package:provider/provider.dart';
 import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/fitness_session_modal.dart';
 import '../widgets/wellness_modal.dart';
+import '../widgets/membership_carousel.dart';
 
 class WellnessScreen extends StatelessWidget {
   final bool isDarkMode;
 
   const WellnessScreen({super.key, required this.isDarkMode});
+
+  /// Stream of wellness subscriptions from API
+  /// Uses API endpoint 14.3: POST /api/v1/subscription/get-all-subscription
+  /// Request body: {page: 1, limit: 50, categoryId: "wellness_category_id"}
+  Stream<List<Map<String, dynamic>>> _getWellnessSubscriptionsStream() async* {
+    try {
+      final subscriptionService = SubscriptionService();
+      final masterDataService = MasterDataService();
+      
+      // Fetch all categories to find wellness category
+      final categories = await masterDataService.getAllCategories();
+      String? wellnessCategoryId;
+      
+      // Find wellness category by name (case-insensitive)
+      for (var category in categories) {
+        final categoryName = (category['name'] ?? '').toString().toLowerCase();
+        if (categoryName.contains('wellness')) {
+          wellnessCategoryId = category['_id']?.toString() ?? category['id']?.toString();
+          break;
+        }
+      }
+      
+      // API Endpoint: POST /api/v1/subscription/get-all-subscription
+      // Body: {page, limit, categoryId, sessionTypeId, trainerId}
+      final result = await subscriptionService.getAllSubscriptions(
+        page: 1,
+        limit: 50,
+        categoryId: wellnessCategoryId, // Filter by wellness category if found
+      );
+      
+      final subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+      
+      // If no wellness category found, filter client-side by category name
+      if (wellnessCategoryId == null && subscriptions.isNotEmpty) {
+        final filtered = subscriptions.where((sub) {
+          final category = sub['categoryId'];
+          if (category is Map) {
+            final categoryName = (category['name'] ?? '').toString().toLowerCase();
+            return categoryName.contains('wellness');
+          }
+          return false;
+        }).toList();
+        yield filtered;
+      } else {
+        yield subscriptions;
+      }
+    } catch (e) {
+      print('Error fetching wellness subscriptions: $e');
+      yield [];
+    }
+  }
 
   // Session descriptions map
   static const Map<String, String> sessionDescriptions = {
@@ -201,23 +254,48 @@ Align(
 
 const SizedBox(height: 20),
 
-StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance.collection("wellnesscards").snapshots(),
+// Fetch wellness subscriptions from API
+StreamBuilder<List<Map<String, dynamic>>>(
+  stream: _getWellnessSubscriptionsStream(),
   builder: (context, snap) {
     if (!snap.hasData) {
       return Center(child: CircularProgressIndicator());
     }
 
-    final docs = snap.data!.docs;
+    final docs = snap.data!;
 
     return Column(
-      children: docs.map((d) {
-        final data = d.data() as Map<String, dynamic>;
-        final String imageUrl = (data['imageUrl'] as String?) ?? '';
+      children: docs.map((data) {
+        // Fix: Use correct field names from subscription API
+        final String imageUrl = (data['media'] ?? data['imageUrl'] ?? '') as String;
+        final String title = data['name'] ?? 'Wellness Class';
+        final String cardId = data['_id']?.toString() ?? data['id']?.toString() ?? '';
+        
+        // Extract trainer name
+        final trainer = data['trainer'];
+        final trainerName = trainer is Map 
+            ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
+            : trainer?.toString() ?? 'Unknown Trainer';
+        
+        // Extract date (handle array format)
+        final dates = data['date'];
+        String dateStr = '';
+        if (dates is List && dates.isNotEmpty) {
+          dateStr = dates.first?.toString() ?? '';
+        } else if (dates is String) {
+          dateStr = dates;
+        }
+        
+        // Get time range
+        final timeRange = '${data['startTime'] ?? ''} - ${data['endTime'] ?? ''}';
+        
+        // Get subtitle from description or category
+        final subtitle = data['description'] ?? 
+            (data['categoryId'] is Map ? data['categoryId']['name'] ?? '' : '');
 
         return InkWell(
           onTap: () {
-            WellnessModal.show(context, data, d.id, isDarkMode);
+            WellnessModal.show(context, data, cardId, isDarkMode);
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
@@ -256,9 +334,9 @@ StreamBuilder<QuerySnapshot>(
 
               const SizedBox(height: 12),
 
-              // TITLE
+              // TITLE - Fixed: use 'name' instead of 'title'
               Text(
-                data['title'],
+                title,
                 style: GoogleFonts.montserrat(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -268,13 +346,15 @@ StreamBuilder<QuerySnapshot>(
 
               const SizedBox(height: 4),
 
-              // SUBTITLE
+              // SUBTITLE - Fixed: use description or category name
               Text(
-                data['subtitle'],
+                subtitle,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   color: subTextColor,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
 
               const SizedBox(height: 12),
@@ -288,7 +368,7 @@ StreamBuilder<QuerySnapshot>(
                 ),
                 child: Column(
                   children: [
-                    // First Row: Duration and Date
+                    // First Row: Time and Date
                     Row(
                       children: [
                         Expanded(
@@ -302,7 +382,7 @@ StreamBuilder<QuerySnapshot>(
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  data['duration'] ?? 'N/A',
+                                  timeRange,
                                   style: GoogleFonts.inter(
                                     color: subTextColor,
                                     fontSize: 14,
@@ -325,7 +405,7 @@ StreamBuilder<QuerySnapshot>(
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  data['date'] ?? 'No Date',
+                                  dateStr.isNotEmpty ? dateStr : 'No Date',
                                   style: GoogleFonts.inter(
                                     color: subTextColor,
                                     fontSize: 14,
@@ -353,7 +433,7 @@ StreamBuilder<QuerySnapshot>(
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  data['mentor'] ?? 'N/A',
+                                  trainerName,
                                   style: GoogleFonts.inter(
                                     color: subTextColor,
                                     fontSize: 14,
@@ -402,9 +482,9 @@ StreamBuilder<QuerySnapshot>(
               ),
               SizedBox(height: 12),
 
-              // REVIEW AVERAGE
+              // REVIEW AVERAGE - Fixed: use correct ID field
               StreamBuilder<double>(
-                stream: ReviewService.avgRating(d.id),
+                stream: ReviewService.avgRating(cardId),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     final rating = snapshot.data!;
@@ -446,7 +526,7 @@ StreamBuilder<QuerySnapshot>(
               SizedBox(height: 12),
 
 FutureBuilder<bool>(
-  future: PurchaseStatusService.isPurchased(d.id),
+  future: PurchaseStatusService.isPurchased(cardId),
   builder: (context, snapshot) {
     if (!snapshot.hasData) {
       return CircularProgressIndicator();
@@ -471,14 +551,14 @@ FutureBuilder<bool>(
       ),
     ),
     const SizedBox(height: 10),
-    ReviewWidget(cardId: d.id),
+    ReviewWidget(cardId: cardId),
   ],
 );
 
     }
 
     final cartItems = Provider.of<CartProvider>(context).items;
-    final isInCart = cartItems.any((item) => item.id == d.id);
+    final isInCart = cartItems.any((item) => item.id == cardId);
 
     if (isInCart) {
       return Column(
@@ -504,7 +584,7 @@ FutureBuilder<bool>(
             height: 32,
             child: TextButton(
               onPressed: () {
-                Provider.of<CartProvider>(context, listen: false).removeItem(d.id);
+                Provider.of<CartProvider>(context, listen: false).removeItem(cardId);
               },
               child: Text(
                 "Remove",
@@ -527,12 +607,12 @@ FutureBuilder<bool>(
         onPressed: () {
           Provider.of<CartProvider>(context, listen: false).addItem(
             CartItem(
-              id: d.id,
-              title: data['title'],
+              id: cardId,
+              title: title,
               imageUrl: imageUrl.isNotEmpty
                   ? imageUrl
                   : 'assets/default_thumbnail.webp',
-              price: int.parse(data['price']),
+              price: (data['price'] is int) ? data['price'] as int : int.tryParse(data['price']?.toString() ?? '0') ?? 0,
               type: "wellness",
             ),
           );
@@ -569,6 +649,15 @@ FutureBuilder<bool>(
   },
 ),
 
+            const SizedBox(height: 40),
+
+            // Add Packages Carousel Section
+            MembershipCarousel(
+              searchQuery: '',
+              selectedTrainer: null,
+              filterFutureDate: false,
+              isDarkMode: isDarkMode,
+            ),
 
             const SizedBox(height: 120),
           ],

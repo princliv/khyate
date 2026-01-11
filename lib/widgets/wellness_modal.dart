@@ -39,7 +39,30 @@ class WellnessModal extends StatelessWidget {
     final Color dividerColor = isDarkMode ? Colors.white24 : Colors.grey.shade300;
     final Color subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
     final double maxDialogHeight = MediaQuery.of(context).size.height * 0.85;
-    final String imageUrl = (data['imageUrl'] as String?) ?? '';
+    final String imageUrl = (data['media'] ?? data['imageUrl'] ?? '') as String;
+    final String title = data['name'] ?? 'Wellness Class';
+    
+    // Extract trainer name
+    final trainer = data['trainer'];
+    final trainerName = trainer is Map 
+        ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
+        : trainer?.toString() ?? 'Unknown Trainer';
+    
+    // Extract date (handle array format)
+    final dates = data['date'];
+    String dateStr = '';
+    if (dates is List && dates.isNotEmpty) {
+      dateStr = dates.first?.toString() ?? '';
+    } else if (dates is String) {
+      dateStr = dates;
+    }
+    
+    // Get time range
+    final timeRange = '${data['startTime'] ?? ''} - ${data['endTime'] ?? ''}';
+    
+    // Get subtitle from description or category
+    final subtitle = data['description'] ?? 
+        (data['categoryId'] is Map ? data['categoryId']['name'] ?? '' : '');
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -62,7 +85,7 @@ class WellnessModal extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        data['title'] ?? '',
+                        title,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -134,13 +157,15 @@ class WellnessModal extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Subtitle
-                      if (data['subtitle'] != null && (data['subtitle'] as String).isNotEmpty) ...[
+                      if (subtitle.isNotEmpty) ...[
                         Text(
-                          data['subtitle'],
+                          subtitle,
                           style: TextStyle(
                             fontSize: 16,
                             color: subTextColor,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -153,7 +178,7 @@ class WellnessModal extends StatelessWidget {
                         ),
                         child: Column(
                           children: [
-                            // First Row: Duration and Date
+                            // First Row: Time and Date
                             Row(
                               children: [
                                 Expanded(
@@ -167,7 +192,7 @@ class WellnessModal extends StatelessWidget {
                                       SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          data['duration'] ?? 'N/A',
+                                          timeRange,
                                           style: TextStyle(
                                             color: subTextColor,
                                             fontSize: 14,
@@ -190,7 +215,7 @@ class WellnessModal extends StatelessWidget {
                                       SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          data['date'] ?? 'No Date',
+                                          dateStr.isNotEmpty ? dateStr : 'No Date',
                                           style: TextStyle(
                                             color: subTextColor,
                                             fontSize: 14,
@@ -218,7 +243,7 @@ class WellnessModal extends StatelessWidget {
                                       SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          data['mentor'] ?? 'N/A',
+                                          trainerName,
                                           style: TextStyle(
                                             color: subTextColor,
                                             fontSize: 14,
@@ -438,17 +463,17 @@ class WellnessModal extends StatelessWidget {
                                         Provider.of<CartProvider>(context, listen: false).addItem(
                                           CartItem(
                                             id: documentId,
-                                            title: data['title'] ?? '',
+                                            title: title,
                                             imageUrl: imageUrl.isNotEmpty
                                                 ? imageUrl
                                                 : 'assets/default_thumbnail.webp',
-                                            price: int.tryParse(data['price']?.toString() ?? '0') ?? 0,
+                                            price: (data['price'] is int) ? data['price'] as int : int.tryParse(data['price']?.toString() ?? '0') ?? 0,
                                             type: "wellness",
                                           ),
                                         );
 
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text("${data['title']} added to cart")),
+                                          SnackBar(content: Text("$title added to cart")),
                                         );
                                         Navigator.of(context).pop();
                                       },
