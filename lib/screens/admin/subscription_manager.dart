@@ -170,6 +170,165 @@ class _SubscriptionManagerState extends State<SubscriptionManager> {
     }
   }
 
+  Future<void> _showEditDialog(Map<String, dynamic> subscription) async {
+    final editNameController = TextEditingController(text: subscription['name'] ?? '');
+    final editPriceController = TextEditingController(text: subscription['price']?.toString() ?? '');
+    final editDescriptionController = TextEditingController(text: subscription['description'] ?? '');
+    File? editMedia;
+    String? editMediaUrl = subscription['media'] ?? subscription['mediaUrl'];
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Subscription'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                    if (pickedFile != null) {
+                      setDialogState(() {
+                        editMedia = File(pickedFile.path);
+                        editMediaUrl = null;
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: editMedia != null
+                        ? Image.file(editMedia!, fit: BoxFit.cover)
+                        : editMediaUrl != null
+                            ? Image.network(editMediaUrl!, fit: BoxFit.cover)
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('Tap to select media'),
+                                ],
+                              ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: editNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: editPriceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: editDescriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await _subscriptionService.updateSubscription(
+                    subscriptionId: subscription['_id'] ?? subscription['id'] ?? '',
+                    media: editMedia,
+                    name: editNameController.text.isEmpty ? null : editNameController.text,
+                    price: editPriceController.text.isEmpty ? null : double.tryParse(editPriceController.text),
+                    description: editDescriptionController.text.isEmpty ? null : editDescriptionController.text,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Subscription updated successfully')),
+                    );
+                    _loadSubscriptions();
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${e.toString()}')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteSubscription(Map<String, dynamic> subscription) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Subscription'),
+        content: Text('Are you sure you want to delete "${subscription['name'] ?? 'this subscription'}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+      try {
+        await _subscriptionService.deleteSubscription(
+          subscriptionId: subscription['_id'] ?? subscription['id'] ?? '',
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Subscription deleted successfully')),
+          );
+          _loadSubscriptions();
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting subscription: ${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _createSubscription() async {
     if (_nameController.text.isEmpty ||
         _selectedCategoryId == null ||
@@ -848,16 +1007,12 @@ class _SubscriptionManagerState extends State<SubscriptionManager> {
                                       children: [
                                         IconButton(
                                           icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () {
-                                            // TODO: Implement edit
-                                          },
+                                          onPressed: () => _showEditDialog(subscription),
                                           tooltip: 'Edit',
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () {
-                                            // TODO: Implement delete
-                                          },
+                                          onPressed: () => _deleteSubscription(subscription),
                                           tooltip: 'Delete',
                                         ),
                                       ],

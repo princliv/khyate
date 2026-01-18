@@ -179,6 +179,7 @@ class MasterDataService {
   }
 
   // 3.10 Get All Location Masters
+  // Note: This endpoint requires authentication (verifyJWT middleware)
   Future<List<dynamic>> getAllLocationMasters({
     int page = 1,
     int limit = 10,
@@ -193,7 +194,7 @@ class MasterDataService {
       final response = await ApiService.post(
         '$baseUrl/master/get-all-location-master',
         payload,
-        requireAuth: false,
+        requireAuth: true, // Changed to true - endpoint requires JWT authentication
       );
       if (response['success'] == true) {
         return _extractListFromResponse(response);

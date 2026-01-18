@@ -145,20 +145,60 @@ class SubscriptionService {
     }
   }
   
-  // 14.5 Get Subscriptions by Coordinates
+  // 14.5 Get Subscriptions by Coordinates (using latitude/longitude as query params)
   Future<Map<String, dynamic>?> getSubscriptionsByCoordinates({
     required double latitude,
     required double longitude,
-    required double radius,
+    double maxDistance = 5000, // in meters
   }) async {
     try {
+      final response = await ApiService.get(
+        '$baseUrl/subscription/subscriptions/nearby',
+        requireAuth: true,
+        queryParams: {
+          'latitude': latitude.toString(),
+          'longitude': longitude.toString(),
+          'maxDistance': maxDistance.toString(),
+        },
+      );
+      
+      if (response['success'] == true) {
+        return response['data'];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to get subscriptions by coordinates');
+      }
+    } catch (e) {
+      throw Exception('Get subscriptions by coordinates error: ${e.toString()}');
+    }
+  }
+  
+  // 14.6 Get Subscriptions by User Coordinates (using coordinates array with miles or km)
+  Future<Map<String, dynamic>?> getSubscriptionsByUserCoordinates({
+    required List<double> coordinates, // [longitude, latitude]
+    double? miles,
+    double? km,
+  }) async {
+    try {
+      if (coordinates.length != 2) {
+        throw Exception('Coordinates must be an array of 2 elements: [longitude, latitude]');
+      }
+      
+      final payload = <String, dynamic>{
+        'coordinates': coordinates,
+      };
+      
+      if (km != null) {
+        // Convert km to miles for backend (backend expects miles)
+        payload['miles'] = km * 0.621371;
+      } else if (miles != null) {
+        payload['miles'] = miles;
+      } else {
+        payload['miles'] = 5; // Default to 5 miles if neither specified
+      }
+      
       final response = await ApiService.post(
         '$baseUrl/subscription/get-subscriptions-by-coordinates',
-        {
-          'latitude': latitude,
-          'longitude': longitude,
-          'radius': radius,
-        },
+        payload,
         requireAuth: true,
       );
       
@@ -172,31 +212,16 @@ class SubscriptionService {
     }
   }
   
-  // 14.6 Get Subscriptions by User Miles
+  // Legacy method for backward compatibility
   Future<Map<String, dynamic>?> getSubscriptionsByUserMiles({
     required double latitude,
     required double longitude,
     required double miles,
   }) async {
-    try {
-      final response = await ApiService.post(
-        '$baseUrl/subscription/get-subscriptions-by-coordinates',
-        {
-          'latitude': latitude,
-          'longitude': longitude,
-          'miles': miles,
-        },
-        requireAuth: true,
-      );
-      
-      if (response['success'] == true) {
-        return response['data'];
-      } else {
-        throw Exception(response['error'] ?? 'Failed to get subscriptions by miles');
-      }
-    } catch (e) {
-      throw Exception('Get subscriptions by miles error: ${e.toString()}');
-    }
+    return getSubscriptionsByUserCoordinates(
+      coordinates: [longitude, latitude],
+      miles: miles,
+    );
   }
   
   // 14.7 Get Subscriptions by Location ID
@@ -221,23 +246,35 @@ class SubscriptionService {
   
   // 14.8 Filter and Sort Subscriptions
   Future<Map<String, dynamic>?> filterAndSortSubscriptions({
-    String? categoryId,
-    String? sessionTypeId,
-    String? trainerId,
+    dynamic categoryId, // Can be String or List<String>
+    dynamic sessionTypeId, // Can be String or List<String>
+    dynamic trainerId, // Can be String or List<String>
+    dynamic location, // Can be String or List<String>
     double? minPrice,
     double? maxPrice,
     String? sortBy,
-    String? sortOrder,
+    String? order, // Backend uses 'order' not 'sortOrder'
+    bool? isExpired,
+    bool? isSingleClass,
+    int page = 1,
+    int limit = 20,
   }) async {
     try {
-      final payload = <String, dynamic>{};
+      final payload = <String, dynamic>{
+        'page': page,
+        'limit': limit,
+      };
+      
       if (categoryId != null) payload['categoryId'] = categoryId;
       if (sessionTypeId != null) payload['sessionTypeId'] = sessionTypeId;
       if (trainerId != null) payload['trainerId'] = trainerId;
+      if (location != null) payload['location'] = location;
       if (minPrice != null) payload['minPrice'] = minPrice;
       if (maxPrice != null) payload['maxPrice'] = maxPrice;
       if (sortBy != null) payload['sortBy'] = sortBy;
-      if (sortOrder != null) payload['sortOrder'] = sortOrder;
+      if (order != null) payload['order'] = order;
+      if (isExpired != null) payload['isExpired'] = isExpired;
+      if (isSingleClass != null) payload['isSingleClass'] = isSingleClass;
       
       final response = await ApiService.post(
         '$baseUrl/subscription/get-subscriptions-filter',
@@ -390,6 +427,74 @@ class SubscriptionService {
       }
     } catch (e) {
       throw Exception('Subscription check-out error: ${e.toString()}');
+    }
+  }
+  
+  // Get Subscription by ID
+  Future<Map<String, dynamic>?> getSubscriptionById({
+    required String subscriptionId,
+  }) async {
+    try {
+      final response = await ApiService.get(
+        '$baseUrl/subscription/get-subscription-by-id/$subscriptionId',
+        requireAuth: false,
+      );
+      
+      if (response['success'] == true) {
+        return response['data'];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to get subscription');
+      }
+    } catch (e) {
+      throw Exception('Get subscription by ID error: ${e.toString()}');
+    }
+  }
+  
+  // Delete Subscription (Admin only)
+  Future<Map<String, dynamic>?> deleteSubscription({
+    required String subscriptionId,
+  }) async {
+    try {
+      final response = await ApiService.delete(
+        '$baseUrl/subscription/delete-subscription/$subscriptionId',
+        requireAuth: true,
+      );
+      
+      if (response['success'] == true) {
+        return response['data'];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to delete subscription');
+      }
+    } catch (e) {
+      throw Exception('Delete subscription error: ${e.toString()}');
+    }
+  }
+  
+  // Get Subscriptions by Category ID
+  Future<Map<String, dynamic>?> getSubscriptionsByCategoryId({
+    required String categoryId,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final payload = {
+        'page': page,
+        'limit': limit,
+      };
+      
+      final response = await ApiService.post(
+        '$baseUrl/subscription/get-all-subscription/$categoryId',
+        payload,
+        requireAuth: false,
+      );
+      
+      if (response['success'] == true) {
+        return response['data'];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to get subscriptions by category');
+      }
+    } catch (e) {
+      throw Exception('Get subscriptions by category error: ${e.toString()}');
     }
   }
 }

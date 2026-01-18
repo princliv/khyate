@@ -84,12 +84,17 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
         setState(() {
           _categories = categories;
           // Find wellness category (case-insensitive search)
+          // Prioritize exact "wellness" match, exclude anything with "fitness"
           try {
             final wellnessCategory = categories.firstWhere(
-              (cat) => (cat['cName']?.toString().toLowerCase() ?? '').contains('wellness'),
+              (cat) {
+                final categoryName = (cat['cName']?.toString().toLowerCase() ?? '').trim();
+                return categoryName.contains('wellness') && !categoryName.contains('fitness');
+              },
             );
             _wellnessCategoryId = wellnessCategory['_id']?.toString() ?? wellnessCategory['id']?.toString();
             _selectedCategoryId = _wellnessCategoryId;
+            print('Wellness Card Manager: Found wellness category ID: $_wellnessCategoryId');
             if (_wellnessCategoryId != null) {
               _loadSessions();
             }
@@ -360,11 +365,34 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
+      // ENFORCE wellness category - MUST use _wellnessCategoryId
+      if (_wellnessCategoryId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wellness category not found. Please ensure a wellness category exists in the system.')),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+      
+      // Double-check selected category is wellness (prevent user from selecting wrong category)
+      if (_selectedCategoryId != null && _selectedCategoryId != _wellnessCategoryId) {
+        final selectedCat = _categories.firstWhere(
+          (cat) => (cat['_id']?.toString() ?? cat['id']?.toString()) == _selectedCategoryId,
+          orElse: () => {},
+        );
+        final categoryName = (selectedCat['cName'] ?? '').toString().toLowerCase();
+        if (!categoryName.contains('wellness') || categoryName.contains('fitness')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Only wellness categories are allowed. Using wellness category.')),
+          );
+        }
+      }
+      
       await _subscriptionService.createSubscription(
         media: mediaToUpload,
         mediaUrl: mediaUrl,
         name: _nameController.text.trim(),
-        categoryId: _selectedCategoryId!,
+        categoryId: _wellnessCategoryId!, // ALWAYS use wellness category ID (strictly enforced)
         price: price,
         trainer: _selectedTrainerId!,
         sessionType: _selectedSessionTypeId!,
@@ -388,6 +416,8 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
         _startTimeController.clear();
         _endTimeController.clear();
         setState(() {
+          // Keep wellness category selected - don't reset it
+          // _selectedCategoryId stays as wellness category
           _selectedTrainerId = null;
           _selectedSessionTypeId = null;
           _selectedAddressId = null;
@@ -811,7 +841,7 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                 child: Text('Loading categories...'),
               )
             : DropdownButtonFormField<String>(
-                value: _selectedCategoryId,
+                value: _wellnessCategoryId ?? _selectedCategoryId,
                 decoration: InputDecoration(
                   labelText: 'Category *',
                   prefixIcon: const Icon(Icons.category, color: Colors.grey),
@@ -830,19 +860,38 @@ class _WellnessCardManagerState extends State<WellnessCardManager> {
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  helperText: 'Wellness category (locked to wellness)',
                 ),
-                items: _categories.map((cat) {
+                // Filter to only show wellness categories (exclude fitness)
+                items: _categories.where((cat) {
+                  final categoryName = (cat['cName'] ?? '').toString().toLowerCase();
+                  return categoryName.contains('wellness') && !categoryName.contains('fitness');
+                }).map((cat) {
                   return DropdownMenuItem<String>(
                     value: cat['_id']?.toString() ?? cat['id']?.toString(),
                     child: Text(cat['cName'] ?? 'Unknown'),
                   );
                 }).toList(),
                 onChanged: (value) {
-                  setState(() {
-                    _selectedCategoryId = value;
-                    _selectedSessionTypeId = null;
-                  });
                   if (value != null) {
+                    // Verify it's still a wellness category
+                    final selectedCat = _categories.firstWhere(
+                      (cat) => (cat['_id']?.toString() ?? cat['id']?.toString()) == value,
+                      orElse: () => {},
+                    );
+                    final categoryName = (selectedCat['cName'] ?? '').toString().toLowerCase();
+                    if (!categoryName.contains('wellness')) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Only wellness categories are allowed in Wellness Card Manager')),
+                      );
+                      return;
+                    }
+                    
+                    setState(() {
+                      _selectedCategoryId = value;
+                      _wellnessCategoryId = value; // Update wellness category ID
+                      _selectedSessionTypeId = null;
+                    });
                     _masterDataService.getSessionsByCategoryId(value).then((sessions) {
                       if (mounted) {
                         setState(() {

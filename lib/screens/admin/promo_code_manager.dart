@@ -15,9 +15,12 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
   final _discountValueController = TextEditingController();
   final _minOrderAmountController = TextEditingController();
   final _maxDiscountAmountController = TextEditingController();
-  final _validFromController = TextEditingController();
-  final _validToController = TextEditingController();
-  final _usageLimitController = TextEditingController();
+  final _startDateController = TextEditingController();
+  final _endDateController = TextEditingController();
+  final _maxUsesController = TextEditingController();
+  final _termsAndConditionsController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _applyOfferAfterOrdersController = TextEditingController();
   final _searchController = TextEditingController();
   final _imageUrlController = TextEditingController();
   
@@ -39,13 +42,10 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
   Future<void> _loadPromoCodes() async {
     setState(() => _isLoading = true);
     try {
-      final result = await _adminService.getAllPromoCodes(
-        page: _page,
-        limit: _limit,
-        search: _searchController.text.isEmpty ? null : _searchController.text,
-      );
+      // API spec says POST with no body required
+      final result = await _adminService.getAllPromoCodes();
       setState(() {
-        _promoCodes = result?['promoCodes'] ?? result?['data'] ?? [];
+        _promoCodes = result?['promoCodes'] ?? result?['data'] ?? (result is List ? result : []);
         _isLoading = false;
       });
     } catch (e) {
@@ -165,7 +165,7 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
                     discountValue: editDiscountValueController.text.isEmpty
                         ? null
                         : double.tryParse(editDiscountValueController.text),
-                    validTo: editValidToController.text.isEmpty
+                    endDate: editValidToController.text.isEmpty
                         ? null
                         : editValidToController.text,
                   );
@@ -195,13 +195,10 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
   Future<void> _createPromoCode() async {
     if (_codeController.text.isEmpty ||
         _discountValueController.text.isEmpty ||
-        _minOrderAmountController.text.isEmpty ||
-        _maxDiscountAmountController.text.isEmpty ||
-        _validFromController.text.isEmpty ||
-        _validToController.text.isEmpty ||
-        _usageLimitController.text.isEmpty) {
+        _maxUsesController.text.isEmpty ||
+        _termsAndConditionsController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        const SnackBar(content: Text('Please fill all required fields (Code, Discount Value, Max Uses, Terms & Conditions)')),
       );
       return;
     }
@@ -214,12 +211,22 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
         code: _codeController.text,
         discountType: _selectedDiscountType!,
         discountValue: double.parse(_discountValueController.text),
-        minOrderAmount: double.parse(_minOrderAmountController.text),
-        maxDiscountAmount: double.parse(_maxDiscountAmountController.text),
-        validFrom: _validFromController.text,
-        validTo: _validToController.text,
-        usageLimit: int.parse(_usageLimitController.text),
+        maxUses: int.parse(_maxUsesController.text),
+        termsAndConditions: _termsAndConditionsController.text,
+        description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
         isActive: _isActive,
+        isValidationDate: _startDateController.text.isNotEmpty || _endDateController.text.isNotEmpty,
+        startDate: _startDateController.text.isEmpty ? null : _startDateController.text,
+        endDate: _endDateController.text.isEmpty ? null : _endDateController.text,
+        applyOfferAfterOrders: _applyOfferAfterOrdersController.text.isEmpty 
+            ? null 
+            : int.tryParse(_applyOfferAfterOrdersController.text),
+        minOrderAmount: _minOrderAmountController.text.isEmpty 
+            ? null 
+            : double.tryParse(_minOrderAmountController.text),
+        maxDiscountAmount: _maxDiscountAmountController.text.isEmpty 
+            ? null 
+            : double.tryParse(_maxDiscountAmountController.text),
       );
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -230,9 +237,12 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
       _discountValueController.clear();
       _minOrderAmountController.clear();
       _maxDiscountAmountController.clear();
-      _validFromController.clear();
-      _validToController.clear();
-      _usageLimitController.clear();
+      _startDateController.clear();
+      _endDateController.clear();
+      _maxUsesController.clear();
+      _termsAndConditionsController.clear();
+      _descriptionController.clear();
+      _applyOfferAfterOrdersController.clear();
       _imageUrlController.clear();
       setState(() {
         _selectedImage = null;
@@ -423,34 +433,89 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: _validFromController,
+                          controller: _startDateController,
                           decoration: const InputDecoration(
                             labelText: 'Valid From *',
                             border: OutlineInputBorder(),
                           ),
                           readOnly: true,
-                          onTap: () => _pickDate(_validFromController),
+                          onTap: () => _pickDate(_startDateController),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
-                          controller: _validToController,
+                          controller: _endDateController,
                           decoration: const InputDecoration(
                             labelText: 'Valid To *',
                             border: OutlineInputBorder(),
                           ),
                           readOnly: true,
-                          onTap: () => _pickDate(_validToController),
+                          onTap: () => _pickDate(_endDateController),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _usageLimitController,
+                    controller: _maxUsesController,
                     decoration: const InputDecoration(
-                      labelText: 'Usage Limit *',
+                      labelText: 'Max Uses *',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _termsAndConditionsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Terms & Conditions *',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _startDateController,
+                          decoration: const InputDecoration(
+                            labelText: 'Start Date (Optional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          readOnly: true,
+                          onTap: () => _pickDate(_startDateController),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _endDateController,
+                          decoration: const InputDecoration(
+                            labelText: 'End Date (Optional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          readOnly: true,
+                          onTap: () => _pickDate(_endDateController),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _applyOfferAfterOrdersController,
+                    decoration: const InputDecoration(
+                      labelText: 'Apply Offer After Orders (Optional)',
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
@@ -528,8 +593,44 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () {
-                                          // TODO: Implement delete
+                                        onPressed: () async {
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('Delete Promo Code'),
+                                              content: const Text('Are you sure you want to delete this promo code?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context, false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                ElevatedButton(
+                                                  onPressed: () => Navigator.pop(context, true),
+                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed == true) {
+                                            try {
+                                              await _adminService.deletePromoCode(
+                                                promoCodeId: promo['_id'] ?? promo['id'] ?? '',
+                                              );
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Promo code deleted successfully')),
+                                                );
+                                                _loadPromoCodes();
+                                              }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('Error deleting promo code: ${e.toString()}')),
+                                                );
+                                              }
+                                            }
+                                          }
                                         },
                                       ),
                                     ],
@@ -552,9 +653,12 @@ class _PromoCodeManagerState extends State<PromoCodeManager> {
     _discountValueController.dispose();
     _minOrderAmountController.dispose();
     _maxDiscountAmountController.dispose();
-    _validFromController.dispose();
-    _validToController.dispose();
-    _usageLimitController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    _maxUsesController.dispose();
+    _termsAndConditionsController.dispose();
+    _descriptionController.dispose();
+    _applyOfferAfterOrdersController.dispose();
     _searchController.dispose();
     _imageUrlController.dispose();
     super.dispose();

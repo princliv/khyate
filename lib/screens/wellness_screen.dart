@@ -17,11 +17,68 @@ import '../widgets/fitness_session_modal.dart';
 import '../widgets/wellness_modal.dart';
 import '../widgets/membership_carousel.dart';
 
-class WellnessScreen extends StatelessWidget {
+class WellnessScreen extends StatefulWidget {
   final bool isDarkMode;
 
   const WellnessScreen({super.key, required this.isDarkMode});
 
+  @override
+  State<WellnessScreen> createState() => _WellnessScreenState();
+}
+
+class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObserver {
+  int _refreshKey = 0; // Key to force stream refresh
+  bool _hasInitialLoad = false;
+  
+  void _refreshData() {
+    if (mounted) {
+      setState(() {
+        _refreshKey++; // Increment key to force stream rebuild
+        _hasInitialLoad = true;
+      });
+    }
+  }
+  
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Refresh data when screen first loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_hasInitialLoad) {
+        _refreshData();
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh when app comes back to foreground (user might have created a subscription in another tab)
+    if (state == AppLifecycleState.resumed && mounted) {
+      _refreshData();
+    }
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh only on first dependency change (when screen is first built)
+    if (!_hasInitialLoad && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_hasInitialLoad) {
+          _refreshData();
+        }
+      });
+    }
+  }
+  
   /// Stream of wellness subscriptions from API
   /// Uses API endpoint 14.3: POST /api/v1/subscription/get-all-subscription
   /// Request body: {page: 1, limit: 50, categoryId: "wellness_category_id"}
@@ -35,12 +92,18 @@ class WellnessScreen extends StatelessWidget {
       String? wellnessCategoryId;
       
       // Find wellness category by name (case-insensitive)
+      // Backend uses 'cName' field (already lowercase), but check both 'name' and 'cName'
       for (var category in categories) {
-        final categoryName = (category['name'] ?? '').toString().toLowerCase();
-        if (categoryName.contains('wellness')) {
+        final categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
+        if (categoryName.isNotEmpty && categoryName.contains('wellness')) {
           wellnessCategoryId = category['_id']?.toString() ?? category['id']?.toString();
+          print('Found wellness category: $categoryName with ID: $wellnessCategoryId');
           break;
         }
+      }
+      
+      if (wellnessCategoryId == null) {
+        print('Warning: Wellness category not found. Will use client-side filtering.');
       }
       
       // API Endpoint: POST /api/v1/subscription/get-all-subscription
@@ -51,21 +114,67 @@ class WellnessScreen extends StatelessWidget {
         categoryId: wellnessCategoryId, // Filter by wellness category if found
       );
       
-      final subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+      var subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
       
-      // If no wellness category found, filter client-side by category name
-      if (wellnessCategoryId == null && subscriptions.isNotEmpty) {
-        final filtered = subscriptions.where((sub) {
+      print('Wellness Screen: Fetched ${subscriptions.length} subscriptions from API');
+      
+      // ALWAYS filter client-side as safety measure to ensure only wellness items appear
+      // This handles cases where API filtering might not work correctly
+      if (subscriptions.isNotEmpty) {
+        final filteredSubscriptions = subscriptions.where((sub) {
           final category = sub['categoryId'];
-          if (category is Map) {
-            final categoryName = (category['name'] ?? '').toString().toLowerCase();
-            return categoryName.contains('wellness');
+          if (category == null) {
+            print('Wellness Screen: Subscription ${sub['_id']} has null categoryId');
+            return false;
           }
-          return false;
+          
+          String categoryName = '';
+          String categoryIdStr = '';
+          
+          // Handle category as Map (populated) or String/ObjectId
+          if (category is Map) {
+            categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
+            categoryIdStr = (category['_id'] ?? category['id'] ?? '').toString();
+          } else {
+            // If category is just an ID, try to match with found category ID
+            categoryIdStr = category.toString();
+            if (wellnessCategoryId != null && categoryIdStr == wellnessCategoryId) {
+              print('Wellness Screen: Subscription ${sub['_id']} matched by wellness category ID');
+              return true; // Match by ID if we found the wellness category
+            }
+            // Can't determine category from ID alone when wellness category not found
+            print('Wellness Screen: Subscription ${sub['_id']} has category ID but wellness category not found');
+            return false;
+          }
+          
+          // Match by category name (case-insensitive)
+          if (categoryName.isEmpty) {
+            print('Wellness Screen: Subscription ${sub['_id']} has empty category name');
+            return false;
+          }
+          
+          final isWellness = categoryName.contains('wellness') && !categoryName.contains('fitness');
+          
+          // Also match by ID if we found the wellness category
+          if (wellnessCategoryId != null && categoryIdStr == wellnessCategoryId) {
+            print('Wellness Screen: Subscription ${sub['name']} (${sub['_id']}) matched - Category: $categoryName, ID: $categoryIdStr');
+            return true;
+          }
+          
+          if (isWellness) {
+            print('Wellness Screen: Subscription ${sub['name']} (${sub['_id']}) included - Category: $categoryName');
+          } else {
+            print('Wellness Screen: Subscription ${sub['name']} (${sub['_id']}) EXCLUDED - Category: $categoryName (not wellness)');
+          }
+          
+          return isWellness;
         }).toList();
-        yield filtered;
+        
+        print('Wellness Screen: After filtering, ${filteredSubscriptions.length} wellness subscriptions remain');
+        yield filteredSubscriptions;
       } else {
-        yield subscriptions;
+        print('Wellness Screen: No subscriptions found in API response');
+        yield [];
       }
     } catch (e) {
       print('Error fetching wellness subscriptions: $e');
@@ -96,13 +205,14 @@ class WellnessScreen extends StatelessWidget {
   };
 
   @override
+  @override
   Widget build(BuildContext context) {
     // Brand Colors - Wellness (Brown/Gold: #AD8654)
     final Color scaffoldBackground =
-        isDarkMode ? const Color(0xFF353535) : const Color(0xFFFCEEE5);
+        widget.isDarkMode ? const Color(0xFF353535) : const Color(0xFFFCEEE5);
 
     final Color headlineColor =
-        isDarkMode ? const Color(0xFFAD8654) : const Color(0xFF353535);
+        widget.isDarkMode ? const Color(0xFFAD8654) : const Color(0xFF353535);
 
     final Color subTextColor = const Color(0xFF99928D);
     final Color accentColor = const Color(0xFFAD8654); // Brown/Gold for Wellness
@@ -130,7 +240,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutCalm",
           sessionDescriptions["OUTCALM"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTCALM"],
         ),
       ),
@@ -141,7 +251,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutRoot",
           sessionDescriptions["OUTROOT"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTROOT"],
         ),
       ),
@@ -152,7 +262,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutCreate",
           sessionDescriptions["OUTCREATE"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTCREATE"],
         ),
       ),
@@ -163,7 +273,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutFlow",
           sessionDescriptions["OUTFLOW"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTFLOW"],
         ),
       ),
@@ -174,7 +284,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutGlow",
           sessionDescriptions["OUTGLOW"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTGLOW"],
         ),
       ),
@@ -185,7 +295,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutSound",
           sessionDescriptions["OUTSOUND"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTSOUND"],
         ),
       ),
@@ -196,7 +306,7 @@ class WellnessScreen extends StatelessWidget {
           context,
           "OutDream",
           sessionDescriptions["OUTDREAM"]!,
-          isDarkMode,
+          widget.isDarkMode,
           imagePath: sessionImages["OUTDREAM"],
         ),
       ),
@@ -232,7 +342,7 @@ class WellnessScreen extends StatelessWidget {
             /// ----------------------------------------
             FitnessSessionsGrid(
               sessions: sessions,
-              isDarkMode: isDarkMode,
+              isDarkMode: widget.isDarkMode,
             ),
 
             const SizedBox(height: 32),
@@ -256,13 +366,71 @@ const SizedBox(height: 20),
 
 // Fetch wellness subscriptions from API
 StreamBuilder<List<Map<String, dynamic>>>(
-  stream: _getWellnessSubscriptionsStream(),
+  key: ValueKey('wellness_subscriptions_$_refreshKey'), // Force rebuild when refreshKey changes
+  stream: _getWellnessSubscriptionsStream(), // Stream will be recreated when key changes
   builder: (context, snap) {
-    if (!snap.hasData) {
-      return Center(child: CircularProgressIndicator());
+    if (snap.connectionState == ConnectionState.waiting) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
-    final docs = snap.data!;
+    if (snap.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading wellness subscriptions: ${snap.error}',
+                style: GoogleFonts.inter(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final docs = snap.data ?? [];
+    
+    if (docs.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.spa_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No wellness programs available',
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Check back later or create wellness subscriptions in the admin panel',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Column(
       children: docs.map((data) {
@@ -295,14 +463,14 @@ StreamBuilder<List<Map<String, dynamic>>>(
 
         return InkWell(
           onTap: () {
-            WellnessModal.show(context, data, cardId, isDarkMode);
+            WellnessModal.show(context, data, cardId, widget.isDarkMode);
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
             margin: EdgeInsets.only(bottom: 20),
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDarkMode ? Colors.black26 : Colors.white,
+              color: widget.isDarkMode ? Colors.black26 : Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -363,7 +531,7 @@ StreamBuilder<List<Map<String, dynamic>>>(
               Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                  color: widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -448,7 +616,7 @@ StreamBuilder<List<Map<String, dynamic>>>(
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isDarkMode 
+                            color: widget.isDarkMode 
                                 ? accentColor.withOpacity(0.2) 
                                 : accentColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
@@ -656,7 +824,7 @@ FutureBuilder<bool>(
               searchQuery: '',
               selectedTrainer: null,
               filterFutureDate: false,
-              isDarkMode: isDarkMode,
+              isDarkMode: widget.isDarkMode,
             ),
 
             const SizedBox(height: 120),

@@ -122,6 +122,50 @@ class _PackageManagerState extends State<PackageManager> {
     }
   }
 
+  Future<void> _deletePackage(Map<String, dynamic> package) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Package'),
+        content: Text('Are you sure you want to delete "${package['name'] ?? 'this package'}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+      try {
+        await _packageService.deletePackage(
+          packageId: package['_id'] ?? package['id'] ?? '',
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Package deleted successfully')),
+          );
+          _loadPackages();
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting package: ${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _showEditDialog(Map<String, dynamic> package) async {
     final editNameController = TextEditingController(text: package['name'] ?? '');
     final editPriceController = TextEditingController(text: package['price']?.toString() ?? '');
@@ -394,9 +438,7 @@ class _PackageManagerState extends State<PackageManager> {
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () {
-                                          // TODO: Implement delete
-                                        },
+                                        onPressed: () => _deletePackage(package),
                                       ),
                                     ],
                                   ),

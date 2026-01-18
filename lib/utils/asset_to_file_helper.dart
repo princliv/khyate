@@ -1,14 +1,23 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
 /// Helper class to convert Flutter assets to File objects
+/// Note: On web, File operations are not supported. This returns null on web.
 class AssetToFileHelper {
   /// Converts an asset to a File object
-  /// Returns null if conversion fails (should not happen in normal operation)
+  /// Returns null if conversion fails or on web platform (web doesn't support File operations)
+  /// On web, use the bytes directly or convert to base64 for upload
   static Future<File?> assetToFile(String assetPath, {String? fileName}) async {
     try {
+      // On web, File operations are not supported - return null gracefully
+      if (kIsWeb) {
+        print('Warning: assetToFile is not supported on web platform. Use asset bytes directly or provide an image URL instead.');
+        return null;
+      }
+      
       // Load asset bytes
       final byteData = await rootBundle.load(assetPath);
       final bytes = byteData.buffer.asUint8List();
@@ -74,5 +83,16 @@ class AssetToFileHelper {
       return null;
     }
   }
+  
+  /// Gets asset bytes directly (works on all platforms including web)
+  /// Use this on web instead of assetToFile when you need the bytes
+  static Future<Uint8List?> assetToBytes(String assetPath) async {
+    try {
+      final byteData = await rootBundle.load(assetPath);
+      return byteData.buffer.asUint8List();
+    } catch (e) {
+      print('Error loading asset bytes: $e');
+      return null;
+    }
+  }
 }
-
