@@ -16,6 +16,12 @@ import '../widgets/fitness_sessions_grid.dart';
 import '../widgets/fitness_session_modal.dart';
 import '../widgets/wellness_modal.dart';
 import '../widgets/membership_carousel.dart';
+import '../widgets/membership_card.dart';
+import '../widgets/membership_modal.dart';
+import '../widgets/todays_classes_list.dart';
+import '../models/membership_card_model.dart';
+import '../services/subscription_booking_service.dart';
+import '../services/notification_service.dart';
 
 class WellnessScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -79,26 +85,33 @@ class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObse
     }
   }
   
-  /// Stream of wellness subscriptions from API
+  /// Stream of wellness subscriptions from API as MembershipCardData
   /// Uses API endpoint 14.3: POST /api/v1/subscription/get-all-subscription
   /// Request body: {page: 1, limit: 50, categoryId: "wellness_category_id"}
-  Stream<List<Map<String, dynamic>>> _getWellnessSubscriptionsStream() async* {
+  Stream<List<MembershipCardData>> getWellnessMembershipsStream() async* {
     try {
       final subscriptionService = SubscriptionService();
+      final subscriptionBookingService = SubscriptionBookingService();
       final masterDataService = MasterDataService();
       
-      // Fetch all categories to find wellness category
+      // Fetch all categories to find wellness category and collect fitness categories
       final categories = await masterDataService.getAllCategories();
       String? wellnessCategoryId;
+      List<String> fitnessCategoryIds = [];
       
-      // Find wellness category by name (case-insensitive)
-      // Backend uses 'cName' field (already lowercase), but check both 'name' and 'cName'
+      // Find wellness category by name (case-insensitive) and collect fitness categories
       for (var category in categories) {
         final categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
-        if (categoryName.isNotEmpty && categoryName.contains('wellness')) {
-          wellnessCategoryId = category['_id']?.toString() ?? category['id']?.toString();
-          print('Found wellness category: $categoryName with ID: $wellnessCategoryId');
-          break;
+        final categoryId = (category['_id'] ?? category['id'] ?? '').toString();
+        
+        if (categoryName.isNotEmpty) {
+          if (categoryName.contains('wellness') && !categoryName.contains('fitness')) {
+            wellnessCategoryId = categoryId;
+            print('Found wellness category: $categoryName with ID: $wellnessCategoryId');
+          } else if (categoryName.contains('fitness') && !categoryName.contains('wellness')) {
+            fitnessCategoryIds.add(categoryId);
+            print('Found fitness category: $categoryName with ID: $categoryId');
+          }
         }
       }
       
@@ -110,7 +123,7 @@ class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObse
       // Body: {page, limit, categoryId, sessionTypeId, trainerId}
       final result = await subscriptionService.getAllSubscriptions(
         page: 1,
-        limit: 50,
+        limit: 100, // Increased to get more subscriptions
         categoryId: wellnessCategoryId, // Filter by wellness category if found
       );
       
@@ -121,7 +134,7 @@ class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObse
       // ALWAYS filter client-side as safety measure to ensure only wellness items appear
       // This handles cases where API filtering might not work correctly
       if (subscriptions.isNotEmpty) {
-        final filteredSubscriptions = subscriptions.where((sub) {
+        subscriptions = subscriptions.where((sub) {
           final category = sub['categoryId'];
           if (category == null) {
             print('Wellness Screen: Subscription ${sub['_id']} has null categoryId');
@@ -136,14 +149,25 @@ class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObse
             categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
             categoryIdStr = (category['_id'] ?? category['id'] ?? '').toString();
           } else {
-            // If category is just an ID, try to match with found category ID
             categoryIdStr = category.toString();
+          }
+          
+          // Explicitly exclude fitness categories by ID
+          if (fitnessCategoryIds.isNotEmpty && fitnessCategoryIds.contains(categoryIdStr)) {
+            print('Wellness Screen: Excluding subscription ${sub['name']} - fitness category ID: $categoryIdStr');
+            return false;
+          }
+          
+          // If category is just an ID, try to match with found category ID
+          if (category is! Map) {
             if (wellnessCategoryId != null && categoryIdStr == wellnessCategoryId) {
-              print('Wellness Screen: Subscription ${sub['_id']} matched by wellness category ID');
               return true; // Match by ID if we found the wellness category
             }
-            // Can't determine category from ID alone when wellness category not found
-            print('Wellness Screen: Subscription ${sub['_id']} has category ID but wellness category not found');
+            // If it's a fitness ID, exclude it
+            if (fitnessCategoryIds.contains(categoryIdStr)) {
+              return false;
+            }
+            // Can't determine from ID alone, skip it
             return false;
           }
           
@@ -153,31 +177,90 @@ class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObse
             return false;
           }
           
-          final isWellness = categoryName.contains('wellness') && !categoryName.contains('fitness');
+          // Explicitly exclude fitness
+          if (categoryName.contains('fitness') || categoryName.contains('gym') || categoryName.contains('workout')) {
+            print('Wellness Screen: Excluding subscription ${sub['name']} - fitness category name: $categoryName');
+            return false;
+          }
+          
+          // Include only wellness
+          final isWellness = categoryName.contains('wellness') || categoryName.contains('spa') || categoryName.contains('yoga') || categoryName.contains('meditation');
           
           // Also match by ID if we found the wellness category
           if (wellnessCategoryId != null && categoryIdStr == wellnessCategoryId) {
-            print('Wellness Screen: Subscription ${sub['name']} (${sub['_id']}) matched - Category: $categoryName, ID: $categoryIdStr');
             return true;
-          }
-          
-          if (isWellness) {
-            print('Wellness Screen: Subscription ${sub['name']} (${sub['_id']}) included - Category: $categoryName');
-          } else {
-            print('Wellness Screen: Subscription ${sub['name']} (${sub['_id']}) EXCLUDED - Category: $categoryName (not wellness)');
           }
           
           return isWellness;
         }).toList();
         
-        print('Wellness Screen: After filtering, ${filteredSubscriptions.length} wellness subscriptions remain');
-        yield filteredSubscriptions;
-      } else {
-        print('Wellness Screen: No subscriptions found in API response');
-        yield [];
+        print('Wellness Screen: After filtering, ${subscriptions.length} wellness subscriptions remain');
       }
+      
+      // Fetch user's purchased subscriptions
+      List<String> purchasedIds = [];
+      try {
+        final bookings = await subscriptionBookingService.getBookingHistory();
+        purchasedIds = bookings.map((booking) {
+          final subId = booking['subscriptionId'] ?? booking['subscription'];
+          if (subId is Map) return subId['_id']?.toString() ?? subId['id']?.toString() ?? '';
+          return subId?.toString() ?? '';
+        }).where((id) => id.isNotEmpty).toList();
+      } catch (e) {
+        print('Error fetching purchased subscriptions: $e');
+      }
+      
+      // Convert subscriptions to MembershipCardData
+      final membershipCards = subscriptions.map<MembershipCardData>((sub) {
+        final id = sub['_id']?.toString() ?? sub['id']?.toString() ?? '';
+        final trainer = sub['trainer'];
+        final trainerName = trainer is Map 
+            ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
+            : trainer?.toString() ?? 'Unknown Trainer';
+        
+        final address = sub['Address'] is Map ? sub['Address'] : {};
+        final location = address['location']?.toString() ?? 
+                        address['addressLine1']?.toString() ?? 
+                        'Location TBD';
+        
+        final dates = sub['date'];
+        String dateStr = '';
+        if (dates is List && dates.isNotEmpty) {
+          dateStr = dates.first?.toString() ?? '';
+        } else if (dates is String) {
+          dateStr = dates;
+        }
+        
+        final category = sub['categoryId'];
+        String categoryName = 'Wellness';
+        if (category is Map) {
+          // Backend uses 'cName' field, but also check 'name' for compatibility
+          categoryName = (category['cName'] ?? category['name'] ?? 'Wellness').toString();
+          // Capitalize first letter for display
+          if (categoryName.isNotEmpty) {
+            categoryName = categoryName[0].toUpperCase() + categoryName.substring(1);
+          }
+        }
+        
+        return MembershipCardData(
+          id: id,
+          title: sub['name'] ?? 'Class',
+          mentor: trainerName,
+          date: dateStr,
+          location: location,
+          imageUrl: sub['media'] ?? sub['imageUrl'] ?? '',
+          price: sub['price']?.toString() ?? '0',
+          description: sub['description'] ?? '',
+          category: categoryName,
+          time: '${sub['startTime'] ?? ''} - ${sub['endTime'] ?? ''}',
+          reviews: '0',
+          isPurchased: purchasedIds.contains(id),
+        );
+      }).toList();
+      
+      yield membershipCards;
     } catch (e) {
-      print('Error fetching wellness subscriptions: $e');
+      print('Error fetching wellness memberships: $e');
       yield [];
     }
   }
@@ -345,489 +428,83 @@ class _WellnessScreenState extends State<WellnessScreen> with WidgetsBindingObse
               isDarkMode: widget.isDarkMode,
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
-            /// Placeholder section for future cards
-            const SizedBox(height: 32),
-
-Align(
-  alignment: Alignment.centerLeft,
-  child: Text(
-    "Wellness Programs",
-    style: GoogleFonts.montserrat(
-      fontWeight: FontWeight.bold,
-      fontSize: 24,
-      color: headlineColor,
-    ),
-  ),
-),
-
-const SizedBox(height: 20),
-
-// Fetch wellness subscriptions from API
-StreamBuilder<List<Map<String, dynamic>>>(
-  key: ValueKey('wellness_subscriptions_$_refreshKey'), // Force rebuild when refreshKey changes
-  stream: _getWellnessSubscriptionsStream(), // Stream will be recreated when key changes
-  builder: (context, snap) {
-    if (snap.connectionState == ConnectionState.waiting) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (snap.hasError) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading wellness subscriptions: ${snap.error}',
-                style: GoogleFonts.inter(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final docs = snap.data ?? [];
-    
-    if (docs.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.spa_outlined, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No wellness programs available',
-                style: GoogleFonts.montserrat(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Check back later or create wellness subscriptions in the admin panel',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: docs.map((data) {
-        // Fix: Use correct field names from subscription API
-        final String imageUrl = (data['media'] ?? data['imageUrl'] ?? '') as String;
-        final String title = data['name'] ?? 'Wellness Class';
-        final String cardId = data['_id']?.toString() ?? data['id']?.toString() ?? '';
-        
-        // Extract trainer name
-        final trainer = data['trainer'];
-        final trainerName = trainer is Map 
-            ? '${trainer['first_name'] ?? ''} ${trainer['last_name'] ?? ''}'.trim()
-            : trainer?.toString() ?? 'Unknown Trainer';
-        
-        // Extract date (handle array format)
-        final dates = data['date'];
-        String dateStr = '';
-        if (dates is List && dates.isNotEmpty) {
-          dateStr = dates.first?.toString() ?? '';
-        } else if (dates is String) {
-          dateStr = dates;
-        }
-        
-        // Get time range
-        final timeRange = '${data['startTime'] ?? ''} - ${data['endTime'] ?? ''}';
-        
-        // Get subtitle from description or category
-        final subtitle = data['description'] ?? 
-            (data['categoryId'] is Map ? data['categoryId']['name'] ?? '' : '');
-
-        return InkWell(
-          onTap: () {
-            WellnessModal.show(context, data, cardId, widget.isDarkMode);
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            margin: EdgeInsets.only(bottom: 20),
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: widget.isDarkMode ? Colors.black26 : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 8,
-                  color: Colors.black12,
-                )
-              ],
+            /// TODAY'S CLASSES SECTION
+            TodaysClassesList(
+              isDarkMode: widget.isDarkMode,
+              categoryFilter: 'wellness', // Only show wellness classes
             ),
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // IMAGE
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.asset(
-                        'assets/default_thumbnail.webp',
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-              ),
 
-              const SizedBox(height: 12),
+            const SizedBox(height: 32),
 
-              // TITLE - Fixed: use 'name' instead of 'title'
-              Text(
-                title,
-                style: GoogleFonts.montserrat(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: headlineColor,
+            /// TOP MEMBERSHIP SECTION
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Top Membership',
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    color: headlineColor,
+                  ),
                 ),
               ),
+            ),
 
-              const SizedBox(height: 4),
-
-              // SUBTITLE - Fixed: use description or category name
-              Text(
-                subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: subTextColor,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 12),
-
-              // DETAILS SECTION - Better organized layout
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    // First Row: Time and Date
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 18,
-                                color: accentColor,
-                              ),
-                              SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  timeRange,
-                                  style: GoogleFonts.inter(
-                                    color: subTextColor,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                size: 18,
-                                color: accentColor,
-                              ),
-                              SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  dateStr.isNotEmpty ? dateStr : 'No Date',
-                                  style: GoogleFonts.inter(
-                                    color: subTextColor,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+            /// FILTERED TOP MEMBERSHIP CARDS
+            StreamBuilder<List<MembershipCardData>>(
+              key: ValueKey('wellness_memberships_$_refreshKey'), // Force rebuild when refreshKey changes
+              stream: getWellnessMembershipsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No memberships available",
+                      style: GoogleFonts.inter(color: subTextColor),
                     ),
-                    SizedBox(height: 12),
-                    // Second Row: Trainer and Price
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.person,
-                                size: 18,
-                                color: accentColor,
-                              ),
-                              SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  trainerName,
-                                  style: GoogleFonts.inter(
-                                    color: subTextColor,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: widget.isDarkMode 
-                                ? accentColor.withOpacity(0.2) 
-                                : accentColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            "AED ${data['price'] ?? '0'}",
-                            style: GoogleFonts.montserrat(
-                              color: headlineColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // DESCRIPTION - Limited to one line with ellipsis
-              Text(
-                data['description'] ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  color: subTextColor,
-                ),
-              ),
-              SizedBox(height: 12),
-
-              // REVIEW AVERAGE - Fixed: use correct ID field
-              StreamBuilder<double>(
-                stream: ReviewService.avgRating(cardId),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    final rating = snapshot.data!;
-                    return Row(
-                      children: [
-                        Icon(
-                          rating > 0 ? Icons.star : Icons.star_border,
-                          color: rating > 0 ? Colors.amber : subTextColor,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          rating > 0
-                              ? "Review: ${rating.toStringAsFixed(1)}"
-                              : "0 review",
-                          style: GoogleFonts.inter(
-                            color: subTextColor,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  return Row(
-                    children: [
-                      Icon(Icons.star_border, color: subTextColor, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        "0 review",
-                        style: GoogleFonts.inter(
-                          color: subTextColor,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
                   );
-                },
-              ),
-              SizedBox(height: 12),
+                }
 
-FutureBuilder<bool>(
-  future: PurchaseStatusService.isPurchased(cardId),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return CircularProgressIndicator();
-    }
+                final allMemberships = snapshot.data!;
+                NotificationService.scheduleUpcomingSessions(allMemberships);
 
-    final purchased = snapshot.data!;
-
-    if (purchased) {
-      return Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Container(
-      height: 45,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.grey,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        "Purchased",
-        style: GoogleFonts.inter(color: Colors.white),
-      ),
-    ),
-    const SizedBox(height: 10),
-    ReviewWidget(cardId: cardId),
-  ],
-);
-
-    }
-
-    final cartItems = Provider.of<CartProvider>(context).items;
-    final isInCart = cartItems.any((item) => item.id == cardId);
-
-    if (isInCart) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            height: 45,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0F7E9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              "Added",
-              style: GoogleFonts.inter(
-                color: Colors.green,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 32,
-            child: TextButton(
-              onPressed: () {
-                Provider.of<CartProvider>(context, listen: false).removeItem(cardId);
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: allMemberships
+                        .map(
+                          (card) => MembershipCard(
+                            data: card,
+                            onTap: () {
+                              MembershipModal.show(context, card, widget.isDarkMode);
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                );
               },
-              child: Text(
-                "Remove",
-                style: GoogleFonts.inter(
-                  color: Colors.redAccent,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
-          ),
-        ],
-      );
-    }
-
-    // Standardized "Add to Cart" button styling
-    return SizedBox(
-      height: 45,
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          Provider.of<CartProvider>(context, listen: false).addItem(
-            CartItem(
-              id: cardId,
-              title: title,
-              imageUrl: imageUrl.isNotEmpty
-                  ? imageUrl
-                  : 'assets/default_thumbnail.webp',
-              price: (data['price'] is int) ? data['price'] as int : int.tryParse(data['price']?.toString() ?? '0') ?? 0,
-              type: "wellness",
-            ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: accentColor,
-          foregroundColor: Colors.white,
-          textStyle: GoogleFonts.montserrat(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          "Add to Cart",
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  },
-)
-
-
-            ],
-          ),
-        ),
-      );
-      }).toList(),
-    );
-  },
-),
 
             const SizedBox(height: 40),
 
-            // Add Packages Carousel Section
+            /// FIND YOUR NEW LATEST PACKAGES SECTION
             MembershipCarousel(
               searchQuery: '',
               selectedTrainer: null,
               filterFutureDate: false,
               isDarkMode: widget.isDarkMode,
+              categoryFilter: 'wellness', // Only show wellness packages
             ),
 
-            const SizedBox(height: 120),
+            const SizedBox(height: 32),
           ],
         ),
       ),

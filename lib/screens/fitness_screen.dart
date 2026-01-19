@@ -77,18 +77,24 @@ class _FitnessScreenState extends State<FitnessScreen> {
       final subscriptionBookingService = SubscriptionBookingService();
       final masterDataService = MasterDataService();
       
-      // Fetch all categories to find fitness category
+      // Fetch all categories to find fitness category and collect wellness categories
       final categories = await masterDataService.getAllCategories();
       String? fitnessCategoryId;
+      List<String> wellnessCategoryIds = [];
       
-      // Find fitness category by name (case-insensitive)
-      // Backend uses 'cName' field (already lowercase), but check both 'name' and 'cName'
+      // Find fitness category by name (case-insensitive) and collect wellness categories
       for (var category in categories) {
         final categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
-        if (categoryName.isNotEmpty && categoryName.contains('fitness') && !categoryName.contains('wellness')) {
-          fitnessCategoryId = category['_id']?.toString() ?? category['id']?.toString();
-          print('Found fitness category: $categoryName with ID: $fitnessCategoryId');
-          break;
+        final categoryId = (category['_id'] ?? category['id'] ?? '').toString();
+        
+        if (categoryName.isNotEmpty) {
+          if (categoryName.contains('fitness') && !categoryName.contains('wellness')) {
+            fitnessCategoryId = categoryId;
+            print('Found fitness category: $categoryName with ID: $fitnessCategoryId');
+          } else if (categoryName.contains('wellness')) {
+            wellnessCategoryIds.add(categoryId);
+            print('Found wellness category: $categoryName with ID: $categoryId');
+          }
         }
       }
       
@@ -100,11 +106,13 @@ class _FitnessScreenState extends State<FitnessScreen> {
       // Body: {page, limit, categoryId, sessionTypeId, trainerId}
       final result = await subscriptionService.getAllSubscriptions(
         page: 1,
-        limit: 50,
+        limit: 100, // Increased to get more subscriptions
         categoryId: fitnessCategoryId, // Filter by fitness category if found
       );
       
       var subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+      
+      print('Fitness Screen: Fetched ${subscriptions.length} subscriptions from API');
       
       // ALWAYS filter client-side as safety measure to ensure only fitness items appear
       // This handles cases where API filtering might not work correctly
@@ -121,18 +129,40 @@ class _FitnessScreenState extends State<FitnessScreen> {
             categoryName = (category['name'] ?? category['cName'] ?? '').toString().toLowerCase().trim();
             categoryIdStr = (category['_id'] ?? category['id'] ?? '').toString();
           } else {
-            // If category is just an ID, try to match with found category ID
             categoryIdStr = category.toString();
+          }
+          
+          // Explicitly exclude wellness categories by ID
+          if (wellnessCategoryIds.isNotEmpty && wellnessCategoryIds.contains(categoryIdStr)) {
+            print('Fitness Screen: Excluding subscription ${sub['name']} - wellness category ID: $categoryIdStr');
+            return false;
+          }
+          
+          // If category is just an ID, try to match with found category ID
+          if (category is! Map) {
             if (fitnessCategoryId != null && categoryIdStr == fitnessCategoryId) {
               return true; // Match by ID if we found the fitness category
             }
-            return false; // Can't determine category from ID alone
+            // If it's a wellness ID, exclude it
+            if (wellnessCategoryIds.contains(categoryIdStr)) {
+              return false;
+            }
+            // Can't determine from ID alone, skip it
+            return false;
           }
           
           // Match by category name (case-insensitive)
           // Include fitness categories and exclude wellness
           if (categoryName.isEmpty) return false;
-          final isFitness = categoryName.contains('fitness') && !categoryName.contains('wellness');
+          
+          // Explicitly exclude wellness
+          if (categoryName.contains('wellness') || categoryName.contains('spa') || categoryName.contains('yoga')) {
+            print('Fitness Screen: Excluding subscription ${sub['name']} - wellness category name: $categoryName');
+            return false;
+          }
+          
+          // Include only fitness
+          final isFitness = categoryName.contains('fitness') || categoryName.contains('gym') || categoryName.contains('workout');
           
           // Also match by ID if we found the fitness category
           if (fitnessCategoryId != null && categoryIdStr == fitnessCategoryId) {
@@ -141,6 +171,8 @@ class _FitnessScreenState extends State<FitnessScreen> {
           
           return isFitness;
         }).toList();
+        
+        print('Fitness Screen: After filtering, ${subscriptions.length} fitness subscriptions remain');
       }
       
       // Fetch user's purchased subscriptions
@@ -476,6 +508,7 @@ const SizedBox(height: 92),
               selectedTrainer: selectedTrainer,
               filterFutureDate: filterFutureDate,
               isDarkMode: widget.isDarkMode,
+              categoryFilter: 'fitness', // Only show fitness packages
             ),
 
             const SizedBox(height: 32),
