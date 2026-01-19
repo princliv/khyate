@@ -13,62 +13,66 @@ class _PlannerDashboardScreenState extends State<PlannerDashboardScreen> {
   final _adminService = AdminService();
   final _masterDataService = MasterDataService();
   
-  DateTime? _startDate;
-  DateTime? _endDate;
-  String? _selectedLocationId;
-  List<dynamic> _locations = [];
+  DateTime? _bookingDate;
+  String? _selectedSubServiceId;
+  List<dynamic> _subServices = [];
   Map<String, dynamic>? _dashboardData;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadLocations();
+    _loadSubServices();
   }
 
-  Future<void> _loadLocations() async {
+  Future<void> _loadSubServices() async {
     try {
-      final locations = await _masterDataService.getAllLocationMasters();
+      final result = await _masterDataService.getAllCustomerServices();
+      // Extract subservices from services
+      final subServicesList = <dynamic>[];
+      if (result is List) {
+        for (var service in result) {
+          if (service['subServices'] is List) {
+            subServicesList.addAll(service['subServices']);
+          }
+        }
+      }
       setState(() {
-        _locations = locations;
+        _subServices = subServicesList;
       });
     } catch (e) {
       // Handle error silently
     }
   }
 
-  Future<void> _pickDate(bool isStartDate) async {
+  Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStartDate ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()),
+      initialDate: _bookingDate ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
       setState(() {
-        if (isStartDate) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
+        _bookingDate = picked;
       });
     }
   }
 
   Future<void> _loadDashboard() async {
-    if (_startDate == null || _endDate == null) {
+    if (_bookingDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select start and end dates')),
+        const SnackBar(content: Text('Please select booking date')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
     try {
+      final bookingDateStr = "${_bookingDate!.year}-${_bookingDate!.month.toString().padLeft(2, '0')}-${_bookingDate!.day.toString().padLeft(2, '0')}";
       final result = await _adminService.getPlannerDashboard(
-        startDate: "${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}",
-        endDate: "${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}",
-        locationId: _selectedLocationId,
+        bookingDate: bookingDateStr,
+        subServiceId: _selectedSubServiceId,
       );
       setState(() {
         _dashboardData = result;
@@ -104,73 +108,43 @@ class _PlannerDashboardScreenState extends State<PlannerDashboardScreen> {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () => _pickDate(true),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _startDate != null
-                                        ? "${_startDate!.day}/${_startDate!.month}/${_startDate!.year}"
-                                        : 'Start Date',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                    InkWell(
+                      onTap: _pickDate,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () => _pickDate(false),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _endDate != null
-                                        ? "${_endDate!.day}/${_endDate!.month}/${_endDate!.year}"
-                                        : 'End Date',
-                                  ),
-                                ],
-                              ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today),
+                            const SizedBox(width: 8),
+                            Text(
+                              _bookingDate != null
+                                  ? "${_bookingDate!.day}/${_bookingDate!.month}/${_bookingDate!.year}"
+                                  : 'Booking Date *',
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _selectedLocationId,
+                      value: _selectedSubServiceId,
                       decoration: const InputDecoration(
-                        labelText: 'Location (Optional)',
+                        labelText: 'Sub Service (Optional)',
                         border: OutlineInputBorder(),
                       ),
-                      items: _locations.map((location) {
+                      items: _subServices.map((subService) {
                         return DropdownMenuItem<String>(
-                          value: location['_id']?.toString() ?? location['id']?.toString(),
-                          child: Text(location['name'] ?? 'Unknown'),
+                          value: subService['_id']?.toString() ?? subService['id']?.toString(),
+                          child: Text(subService['name'] ?? 'Unknown'),
                         );
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          _selectedLocationId = value;
+                          _selectedSubServiceId = value;
                         });
                       },
                     ),

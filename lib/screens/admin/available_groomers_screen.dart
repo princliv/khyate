@@ -57,9 +57,20 @@ class _AvailableGroomersScreenState extends State<AvailableGroomersScreen> {
   }
 
   Future<void> _loadAvailableGroomers() async {
-    if (_selectedDate == null || _selectedTimeslotId == null || _selectedSubServiceId == null) {
+    if (_isForBooking) {
+      // For booking: requires date, timeslot, subServiceId
+      if (_selectedDate == null || _selectedTimeslotId == null || _selectedSubServiceId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill all required fields')),
+        );
+        return;
+      }
+    } else {
+      // For availability check: requires groomerId, timeSlotId, date
+      // Note: This requires a groomerId which we don't have in the current UI
+      // We'll need to add a groomer selection field
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        const SnackBar(content: Text('Groomer selection required for availability check')),
       );
       return;
     }
@@ -68,17 +79,11 @@ class _AvailableGroomersScreenState extends State<AvailableGroomersScreen> {
     try {
       final dateStr = "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}";
       
-      final result = _isForBooking
-          ? await _adminService.getAvailableGroomersForBooking(
-              date: dateStr,
-              timeslotId: _selectedTimeslotId!,
-              subServiceId: _selectedSubServiceId!,
-            )
-          : await _adminService.getAvailableGroomers(
-              date: dateStr,
-              timeslotId: _selectedTimeslotId!,
-              subServiceId: _selectedSubServiceId!,
-            );
+      final result = await _adminService.getAvailableGroomersForBooking(
+        date: dateStr,
+        timeslot: _selectedTimeslotId!,
+        subServiceId: _selectedSubServiceId!,
+      );
       
       setState(() {
         _availableGroomers = result?['groomers'] ?? result?['data'] ?? [];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Outbox/widgets/todays_class_modal.dart';
 import '../services/subscription_service.dart';
+import '../services/master_data_service.dart';
 
 /// Model for Today's Classes
 class TodayClassData {
@@ -64,15 +65,79 @@ DateTime? parseDDMMYYYY(String dateString) {
 }
 
 /// Fetch today's classes from your API
-Future<List<TodayClassData>> fetchTodaysClasses() async {
+/// [categoryFilter] - 'fitness' or 'wellness' to filter by category, null for all
+Future<List<TodayClassData>> fetchTodaysClasses({String? categoryFilter}) async {
   try {
     final subscriptionService = SubscriptionService();
+    final masterDataService = MasterDataService();
     final today = DateTime.now();
     final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
     
+    // Fetch categories if filtering by category
+    String? categoryId;
+    List<String> excludedCategoryIds = [];
+    if (categoryFilter != null) {
+      final categories = await masterDataService.getAllCategories();
+      for (var category in categories) {
+        final categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
+        final catId = (category['_id'] ?? category['id'] ?? '').toString();
+        
+        if (categoryFilter == 'wellness') {
+          if (categoryName.contains('wellness') && !categoryName.contains('fitness')) {
+            categoryId = catId;
+          } else if (categoryName.contains('fitness') && !categoryName.contains('wellness')) {
+            excludedCategoryIds.add(catId);
+          }
+        } else if (categoryFilter == 'fitness') {
+          if (categoryName.contains('fitness') && !categoryName.contains('wellness')) {
+            categoryId = catId;
+          } else if (categoryName.contains('wellness') && !categoryName.contains('fitness')) {
+            excludedCategoryIds.add(catId);
+          }
+        }
+      }
+    }
+    
     // Fetch subscriptions for today
     final result = await subscriptionService.getSubscriptionsByDate(date: todayStr);
-    final subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+    var subscriptions = result?['subscriptions'] ?? result?['data'] ?? [];
+    
+    // Filter by category if specified
+    if (categoryFilter != null && subscriptions.isNotEmpty) {
+      subscriptions = subscriptions.where((sub) {
+        final category = sub['categoryId'];
+        if (category == null) return false;
+        
+        String categoryIdStr = '';
+        String categoryName = '';
+        
+        if (category is Map) {
+          categoryIdStr = (category['_id'] ?? category['id'] ?? '').toString();
+          categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
+        } else {
+          categoryIdStr = category.toString();
+        }
+        
+        // Exclude opposite category by ID
+        if (excludedCategoryIds.isNotEmpty && excludedCategoryIds.contains(categoryIdStr)) {
+          return false;
+        }
+        
+        // Include by category ID if found
+        if (categoryId != null && categoryIdStr == categoryId) {
+          return true;
+        }
+        
+        // Filter by category name
+        if (categoryFilter == 'wellness') {
+          return categoryName.contains('wellness') && !categoryName.contains('fitness');
+        } else if (categoryFilter == 'fitness') {
+          return categoryName.contains('fitness') && !categoryName.contains('wellness');
+        }
+        
+        return true;
+      }).toList();
+    }
     
     // Convert subscriptions to TodayClassData
     return subscriptions.map<TodayClassData>((sub) {
@@ -108,13 +173,18 @@ Future<List<TodayClassData>> fetchTodaysClasses() async {
 /// Widget for displaying Today's Classes horizontally
 class TodaysClassesList extends StatelessWidget {
   final bool isDarkMode;
+  final String? categoryFilter; // 'fitness' or 'wellness' to filter by category
   
-  const TodaysClassesList({super.key, this.isDarkMode = false});
+  const TodaysClassesList({
+    super.key, 
+    this.isDarkMode = false,
+    this.categoryFilter, // null means show all
+  });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<TodayClassData>>(
-      future: fetchTodaysClasses(),
+      future: fetchTodaysClasses(categoryFilter: categoryFilter),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -139,7 +209,9 @@ class TodaysClassesList extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: isDarkMode ? const Color(0xFFC5A572) : const Color(0xFF1A2332),
+                color: categoryFilter == 'wellness'
+                    ? (isDarkMode ? const Color(0xFFAD8654) : const Color(0xFF1A2332))
+                    : (isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF1A2332)),
               ),
             ),
             const SizedBox(height: 12),

@@ -13,36 +13,35 @@ class _ArticleManagerState extends State<ArticleManager> {
   final _adminService = AdminService();
   
   final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
-  final _authorController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _imageUrlController = TextEditingController();
   
   File? _selectedImage;
   bool _useImageUrl = false;
-  bool _isPublished = true;
   List<dynamic> _articles = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadAuthor();
+    _loadArticles();
   }
 
-  Future<void> _loadAuthor() async {
-    // Get current user name as author
+  Future<void> _loadArticles() async {
+    setState(() => _isLoading = true);
     try {
-      final userProfile = await ApiService.get(
-        '${ApiService.baseUrl}/user/get-user-profile',
-        requireAuth: true,
-      );
-      if (userProfile['success'] == true) {
-        final data = userProfile['data'];
-        final userData = data['data'] ?? data;
-        _authorController.text = userData['first_name'] ?? 'Admin';
-      }
+      final result = await _adminService.getAllArticles();
+      setState(() {
+        _articles = result?['articles'] ?? result?['data'] ?? (result is List ? result : []);
+        _isLoading = false;
+      });
     } catch (e) {
-      _authorController.text = 'Admin';
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading articles: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -58,7 +57,7 @@ class _ArticleManagerState extends State<ArticleManager> {
 
   Future<void> _showEditDialog(Map<String, dynamic> article) async {
     final editTitleController = TextEditingController(text: article['title'] ?? '');
-    final editContentController = TextEditingController(text: article['content'] ?? '');
+    final editDescriptionController = TextEditingController(text: article['description'] ?? '');
     File? editImage;
     String? editImageUrl = article['image'] ?? article['imageUrl'];
 
@@ -113,9 +112,9 @@ class _ArticleManagerState extends State<ArticleManager> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: editContentController,
+                  controller: editDescriptionController,
                   decoration: const InputDecoration(
-                    labelText: 'Content',
+                    labelText: 'Description',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 5,
@@ -134,19 +133,20 @@ class _ArticleManagerState extends State<ArticleManager> {
                   await _adminService.updateArticle(
                     articleId: article['_id'] ?? article['id'] ?? '',
                     image: editImage,
+                    imageUrl: editImageUrl,
                     title: editTitleController.text.isEmpty
                         ? null
                         : editTitleController.text,
-                    content: editContentController.text.isEmpty
+                    description: editDescriptionController.text.isEmpty
                         ? null
-                        : editContentController.text,
+                        : editDescriptionController.text,
                   );
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Article updated successfully')),
                     );
-                    // TODO: Reload articles list
+                    _loadArticles();
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -165,11 +165,16 @@ class _ArticleManagerState extends State<ArticleManager> {
   }
 
   Future<void> _createArticle() async {
-    if (_titleController.text.isEmpty ||
-        _contentController.text.isEmpty ||
-        _authorController.text.isEmpty) {
+    if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        const SnackBar(content: Text('Please enter a title')),
+      );
+      return;
+    }
+    
+    if (!_useImageUrl && _selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an image or provide an image URL')),
       );
       return;
     }
@@ -180,9 +185,7 @@ class _ArticleManagerState extends State<ArticleManager> {
         image: _useImageUrl ? null : _selectedImage,
         imageUrl: _useImageUrl ? _imageUrlController.text.trim() : null,
         title: _titleController.text,
-        content: _contentController.text,
-        author: _authorController.text,
-        isPublished: _isPublished,
+        description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
       );
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,12 +193,13 @@ class _ArticleManagerState extends State<ArticleManager> {
       );
       
       _titleController.clear();
-      _contentController.clear();
+      _descriptionController.clear();
       _imageUrlController.clear();
       setState(() {
         _selectedImage = null;
         _useImageUrl = false;
       });
+      _loadArticles();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error creating article: ${e.toString()}')),
@@ -333,30 +337,12 @@ class _ArticleManagerState extends State<ArticleManager> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _contentController,
+                    controller: _descriptionController,
                     decoration: const InputDecoration(
-                      labelText: 'Content *',
+                      labelText: 'Description (Optional)',
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 5,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _authorController,
-                    decoration: const InputDecoration(
-                      labelText: 'Author *',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  CheckboxListTile(
-                    title: const Text('Is Published'),
-                    value: _isPublished,
-                    onChanged: (value) {
-                      setState(() {
-                        _isPublished = value ?? true;
-                      });
-                    },
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -369,6 +355,99 @@ class _ArticleManagerState extends State<ArticleManager> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          // Articles List
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Articles List',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _articles.isEmpty
+                          ? const Center(child: Text('No articles found'))
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _articles.length,
+                              itemBuilder: (context, index) {
+                                final article = _articles[index];
+                                return ListTile(
+                                  leading: article['image'] != null || article['imageUrl'] != null
+                                      ? Image.network(
+                                          article['image'] ?? article['imageUrl'],
+                                          width: 50,
+                                          height: 50,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.article),
+                                        )
+                                      : const Icon(Icons.article),
+                                  title: Text(article['title'] ?? 'Unknown'),
+                                  subtitle: Text(article['description'] ?? ''),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, color: Colors.blue),
+                                        onPressed: () => _showEditDialog(article),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () async {
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('Delete Article'),
+                                              content: const Text('Are you sure you want to delete this article?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context, false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                ElevatedButton(
+                                                  onPressed: () => Navigator.pop(context, true),
+                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed == true) {
+                                            try {
+                                              await _adminService.deleteArticle(
+                                                articleId: article['_id'] ?? article['id'] ?? '',
+                                              );
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Article deleted successfully')),
+                                                );
+                                                _loadArticles();
+                                              }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('Error deleting article: ${e.toString()}')),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -377,8 +456,7 @@ class _ArticleManagerState extends State<ArticleManager> {
   @override
   void dispose() {
     _titleController.dispose();
-    _contentController.dispose();
-    _authorController.dispose();
+    _descriptionController.dispose();
     _imageUrlController.dispose();
     super.dispose();
   }

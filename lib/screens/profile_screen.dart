@@ -744,54 +744,63 @@ Future<void> loadProfile() async {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: titleColor,
-                      letterSpacing: 0.3,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: titleColor,
+                        letterSpacing: 0.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
                   ),
-                  if (showEdit)
-                    InkWell(
-                      onTap: onEdit,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isDark
-                                ? [const Color(0xFF21B998), const Color(0xFF0097B2)]
-                                : [const Color(0xFF21B998), const Color(0xFF0097B2)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF21B998).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                  if (showEdit) ...[
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: InkWell(
+                        onTap: onEdit,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: isDark
+                                  ? [const Color(0xFF21B998), const Color(0xFF0097B2)]
+                                  : [const Color(0xFF21B998), const Color(0xFF0097B2)],
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.edit, size: 16, color: Colors.white),
-                            const SizedBox(width: 6),
-                            Text(
-                              "Edit",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF21B998).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit, size: 16, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Edit",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    )
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 24),

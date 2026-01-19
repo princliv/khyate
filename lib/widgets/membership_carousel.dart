@@ -8,12 +8,14 @@ import 'package:Outbox/widgets/membership_carousel_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/package_service.dart';
+import '../services/master_data_service.dart';
 
 class MembershipCarousel extends StatelessWidget {
   final String searchQuery;
   final String? selectedTrainer;
   final bool filterFutureDate;
   final bool isDarkMode;
+  final String? categoryFilter; // 'fitness' or 'wellness' to filter packages
 
   const MembershipCarousel({
     super.key,
@@ -21,6 +23,7 @@ class MembershipCarousel extends StatelessWidget {
     this.selectedTrainer,
     this.filterFutureDate = false,
     this.isDarkMode = false,
+    this.categoryFilter, // null means show all, 'fitness' shows only fitness, 'wellness' shows only wellness
   });
 
   /// Fetches packages using API endpoint 15.3: POST /api/v1/package/get-all-packages
@@ -28,12 +31,129 @@ class MembershipCarousel extends StatelessWidget {
   Future<List<MembershipCarouselData>> _fetchPackages() async {
     try {
       final packageService = PackageService();
+      final masterDataService = MasterDataService();
+      
+      // Fetch categories to identify wellness-related packages
+      final categories = await masterDataService.getAllCategories();
+      List<String> wellnessCategoryIds = [];
+      List<String> wellnessKeywords = ['wellness', 'spa', 'yoga', 'meditation', 'relaxation', 'calm', 'glow', 'sound', 'dream'];
+      List<String> fitnessKeywords = ['fitness', 'gym', 'workout', 'training', 'exercise', 'muscle', 'strength', 'cardio'];
+      
+      // Collect wellness category IDs and keywords
+      for (var category in categories) {
+        final categoryName = (category['cName'] ?? category['name'] ?? '').toString().toLowerCase().trim();
+        if (categoryName.contains('wellness')) {
+          final categoryId = (category['_id'] ?? category['id'] ?? '').toString();
+          wellnessCategoryIds.add(categoryId);
+        }
+      }
+      
       // API Endpoint: POST /api/v1/package/get-all-packages
       // Body: {page, limit, search}
-      final result = await packageService.getAllPackages(page: 1, limit: 50, search: searchQuery.isEmpty ? null : searchQuery);
-      final packages = result?['packages'] ?? result?['data'] ?? [];
+      // Note: API doesn't support category filtering, so we filter client-side
+      final result = await packageService.getAllPackages(
+        page: 1, 
+        limit: 100, // Increased to get all packages
+        search: searchQuery.isEmpty ? null : searchQuery
+      );
       
-      return packages.map<MembershipCarouselData>((pkg) {
+      print('MembershipCarousel: API result type: ${result.runtimeType}');
+      print('MembershipCarousel: API result: $result');
+      
+      // Handle different possible response structures
+      // The service returns response['data'], so result is the backend's response
+      // Backend might return: {packages: [...]}, {data: {packages: [...]}}, or [...] directly
+      var packages = <dynamic>[];
+      if (result != null) {
+        if (result is List) {
+          // Response is an array directly
+          packages = result as List;
+          print('MembershipCarousel: Response is a List with ${packages.length} items');
+        } else if (result is Map) {
+          // Check for packages array
+          if (result['packages'] is List) {
+            packages = result['packages'] as List;
+            print('MembershipCarousel: Found packages in result[\'packages\']: ${packages.length} items');
+          } else if (result['data'] is List) {
+            packages = result['data'] as List;
+            print('MembershipCarousel: Found packages in result[\'data\'] as List: ${packages.length} items');
+          } else if (result['data'] is Map) {
+            final dataMap = result['data'] as Map;
+            if (dataMap['packages'] is List) {
+              packages = dataMap['packages'] as List;
+              print('MembershipCarousel: Found packages in result[\'data\'][\'packages\']: ${packages.length} items');
+            }
+          }
+          
+          if (packages.isEmpty) {
+            print('MembershipCarousel: WARNING - No packages found. Result keys: ${result.keys}');
+            if (result['data'] != null) {
+              print('MembershipCarousel: result[\'data\'] type: ${result['data'].runtimeType}, value: ${result['data']}');
+            }
+          }
+        }
+      } else {
+        print('MembershipCarousel: WARNING - result is null!');
+      }
+      
+      print('MembershipCarousel: Fetched ${packages.length} packages from API (categoryFilter: $categoryFilter)');
+      
+      // Filter packages based on categoryFilter
+      final filteredPackages = packages.where((pkg) {
+        // If no category filter, show all packages
+        if (categoryFilter == null) return true;
+        
+        final name = (pkg['name'] ?? '').toString().toLowerCase();
+        final description = (pkg['description'] ?? '').toString().toLowerCase();
+        
+        if (categoryFilter == 'fitness') {
+          // Exclude wellness-related packages
+          final hasWellnessKeyword = wellnessKeywords.any((keyword) => 
+            name.contains(keyword) || description.contains(keyword)
+          );
+          
+          if (hasWellnessKeyword) {
+            print('MembershipCarousel: Excluding package ${pkg['name']} - contains wellness keywords');
+            return false;
+          }
+          
+          // Include packages with fitness keywords or no specific keywords (assumed fitness)
+          final hasFitnessKeyword = fitnessKeywords.any((keyword) => 
+            name.contains(keyword) || description.contains(keyword)
+          );
+          
+          // If it has fitness keywords or no wellness keywords, include it
+          return true; // Default to including if no wellness keywords
+        } else if (categoryFilter == 'wellness') {
+          // Include only wellness-related packages
+          final hasWellnessKeyword = wellnessKeywords.any((keyword) => 
+            name.contains(keyword) || description.contains(keyword)
+          );
+          
+          if (!hasWellnessKeyword) {
+            print('MembershipCarousel: Excluding package ${pkg['name']} - does not contain wellness keywords');
+            return false;
+          }
+          
+          // Exclude fitness packages
+          final hasFitnessKeyword = fitnessKeywords.any((keyword) => 
+            name.contains(keyword) || description.contains(keyword)
+          );
+          
+          if (hasFitnessKeyword) {
+            print('MembershipCarousel: Excluding package ${pkg['name']} - contains fitness keywords');
+            return false;
+          }
+          
+          return true;
+        }
+        
+        return true;
+      }).toList();
+      
+      print('MembershipCarousel: After filtering, ${filteredPackages.length} packages remain');
+      
+      return filteredPackages.map<MembershipCarouselData>((pkg) {
         final id = pkg['_id']?.toString() ?? pkg['id']?.toString() ?? '';
         // Extract duration (daily/weekly/monthly) and numberOfClasses
         final duration = pkg['duration']?.toString().toLowerCase() ?? 'weekly';
@@ -60,8 +180,9 @@ class MembershipCarousel extends StatelessWidget {
           features: featuresList,
         );
       }).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error fetching packages: $e');
+      print('Stack trace: $stackTrace');
       return [];
     }
   }
@@ -93,8 +214,52 @@ class MembershipCarousel extends StatelessWidget {
           );
         }
 
+        // Check for errors
+        if (snapshot.hasError) {
+          print('MembershipCarousel: Error in snapshot: ${snapshot.error}');
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 32),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Find Your New Latest Packages",
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF353535),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Center(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Error loading packages: ${snapshot.error}',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white70 : Colors.red,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
         // Map API data to MembershipCarouselData
         final items = snapshot.data ?? [];
+        
+        print('MembershipCarousel: Received ${items.length} items from future');
 
         // Apply filters
         final filteredItems = items.where((card) {
@@ -107,6 +272,8 @@ class MembershipCarousel extends StatelessWidget {
                   DateTime.tryParse(card.date)?.isAfter(DateTime.now()) == true);
           return matchesName && matchesTrainer && matchesDate;
         }).toList();
+        
+        print('MembershipCarousel: After filtering, ${filteredItems.length} items remain');
 
         return _buildCarousel(filteredItems, context, isDarkMode);
       },
@@ -114,8 +281,11 @@ class MembershipCarousel extends StatelessWidget {
   }
 
   Widget _buildCarousel(List<MembershipCarouselData> items, BuildContext context, bool isDarkMode) {
-    // Use fitness screen colors: Teal (#21C8B1) for fitness
-    final Color headlineColor = isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF353535);
+    // Use appropriate colors based on category filter
+    // Fitness: Teal (#21C8B1), Wellness: Brown/Gold (#AD8654), Default: Teal
+    final Color headlineColor = categoryFilter == 'wellness'
+        ? (isDarkMode ? const Color(0xFFAD8654) : const Color(0xFF353535))
+        : (isDarkMode ? const Color(0xFF21C8B1) : const Color(0xFF353535));
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,8 +348,11 @@ class MembershipCarousel extends StatelessWidget {
         onTap: () {
           MembershipCarouselModal.show(context, card, isDarkMode);
         },
-        child: SizedBox(
-          height: 520,
+        child: Container(
+          constraints: const BoxConstraints(
+            minHeight: 520,
+            maxHeight: 560, // Increased max height to prevent overflow
+          ),
           child: Container(
             decoration: BoxDecoration(
               color: cardColor,
@@ -189,6 +362,7 @@ class MembershipCarousel extends StatelessWidget {
               ],
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
               /// IMAGE with OVERLAY and TAGS
               Stack(
@@ -272,10 +446,11 @@ class MembershipCarousel extends StatelessWidget {
               ),
 
               /// DETAILS
-              Expanded(
+              Flexible(
                 child: Padding(
                   padding: const EdgeInsets.all(15),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   const SizedBox(height: 16),
@@ -288,6 +463,8 @@ class MembershipCarousel extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: textColor,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
 
                   const SizedBox(height: 8),
@@ -316,30 +493,48 @@ class MembershipCarousel extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // Features List with checkmarks
+                  // Features List with checkmarks - Limited to prevent overflow
                   if (card.features.isNotEmpty) ...[
-                    ...card.features.map((feature) => Padding(
+                    ...card.features.take(3).map((feature) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.check_circle,
-                            size: 18,
-                            color: accentColor,
-                                        ),
-                          const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                              feature,
-                                            style: TextStyle(
-                                fontSize: 14,
-                                              color: textColor,
-                                            ),
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.check_circle,
+                              size: 18,
+                              color: accentColor,
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              feature,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: textColor,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     )),
+                    if (card.features.length > 3)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '+ ${card.features.length - 3} more',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: subTextColor,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 12),
                   ],
 

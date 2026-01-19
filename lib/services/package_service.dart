@@ -100,7 +100,7 @@ class PackageService {
       final response = await ApiService.post(
         '$baseUrl/package/get-all-packages',
         payload,
-        requireAuth: true,
+        requireAuth: false, // Public route
       );
       
       if (response['success'] == true) {
@@ -110,6 +110,46 @@ class PackageService {
       }
     } catch (e) {
       throw Exception('Get all packages error: ${e.toString()}');
+    }
+  }
+  
+  // 15.4 Get Package by ID
+  Future<Map<String, dynamic>?> getPackageById({
+    required String packageId,
+  }) async {
+    try {
+      final response = await ApiService.get(
+        '$baseUrl/package/get-package-by-id/$packageId',
+        requireAuth: false, // Public route
+      );
+      
+      if (response['success'] == true) {
+        return response['data'];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to get package');
+      }
+    } catch (e) {
+      throw Exception('Get package by ID error: ${e.toString()}');
+    }
+  }
+  
+  // 15.5 Delete Package (Admin only)
+  Future<Map<String, dynamic>?> deletePackage({
+    required String packageId,
+  }) async {
+    try {
+      final response = await ApiService.delete(
+        '$baseUrl/package/delete-package/$packageId',
+        requireAuth: true,
+      );
+      
+      if (response['success'] == true) {
+        return response['data'];
+      } else {
+        throw Exception(response['error'] ?? 'Failed to delete package');
+      }
+    } catch (e) {
+      throw Exception('Delete package error: ${e.toString()}');
     }
   }
 }

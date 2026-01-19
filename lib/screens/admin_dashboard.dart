@@ -786,12 +786,17 @@ class _FitnessMembershipCardManagerState
         setState(() {
           _categories = categories;
           // Find fitness category (case-insensitive search)
+          // Prioritize exact "fitness" match, exclude anything with "wellness"
           try {
             final fitnessCategory = categories.firstWhere(
-              (cat) => (cat['cName']?.toString().toLowerCase() ?? '').contains('fitness'),
+              (cat) {
+                final categoryName = (cat['cName']?.toString().toLowerCase() ?? '').trim();
+                return categoryName.contains('fitness') && !categoryName.contains('wellness');
+              },
             );
             _fitnessCategoryId = fitnessCategory['_id']?.toString() ?? fitnessCategory['id']?.toString();
             _selectedCategoryId = _fitnessCategoryId;
+            print('Fitness Card Manager: Found fitness category ID: $_fitnessCategoryId');
             if (_fitnessCategoryId != null) {
               _loadSessions();
             }
@@ -1063,11 +1068,34 @@ class _FitnessMembershipCardManagerState
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
+      // ENFORCE fitness category - MUST use _fitnessCategoryId
+      if (_fitnessCategoryId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fitness category not found. Please ensure a fitness category exists in the system.')),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+      
+      // Double-check selected category is fitness (prevent user from selecting wrong category)
+      if (_selectedCategoryId != null && _selectedCategoryId != _fitnessCategoryId) {
+        final selectedCat = _categories.firstWhere(
+          (cat) => (cat['_id']?.toString() ?? cat['id']?.toString()) == _selectedCategoryId,
+          orElse: () => {},
+        );
+        final categoryName = (selectedCat['cName'] ?? '').toString().toLowerCase();
+        if (!categoryName.contains('fitness') || categoryName.contains('wellness')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Only fitness categories are allowed. Using fitness category.')),
+          );
+        }
+      }
+      
       await _subscriptionService.createSubscription(
         media: mediaToUpload,
         mediaUrl: mediaUrl,
         name: _nameController.text.trim(),
-        categoryId: _selectedCategoryId!,
+        categoryId: _fitnessCategoryId!, // ALWAYS use fitness category ID (strictly enforced)
         price: price,
         trainer: _selectedTrainerId!,
         sessionType: _selectedSessionTypeId!,
@@ -1091,6 +1119,8 @@ class _FitnessMembershipCardManagerState
         _startTimeController.clear();
         _endTimeController.clear();
         setState(() {
+          // Keep fitness category selected, don't reset it
+          // _selectedCategoryId = null; // Don't reset - keep fitness category
           _selectedTrainerId = null;
           _selectedSessionTypeId = null;
           _selectedAddressId = null;
@@ -1516,7 +1546,7 @@ class _FitnessMembershipCardManagerState
                 child: Text('Loading categories...'),
               )
             : DropdownButtonFormField<String>(
-                value: _selectedCategoryId,
+                value: _fitnessCategoryId ?? _selectedCategoryId,
                 decoration: InputDecoration(
                   labelText: 'Category *',
                   prefixIcon: const Icon(Icons.category, color: Colors.grey),
@@ -1535,19 +1565,38 @@ class _FitnessMembershipCardManagerState
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  helperText: 'Fitness category (locked to fitness)',
                 ),
-                items: _categories.map((cat) {
+                // Filter to only show fitness categories (exclude wellness)
+                items: _categories.where((cat) {
+                  final categoryName = (cat['cName'] ?? '').toString().toLowerCase();
+                  return categoryName.contains('fitness') && !categoryName.contains('wellness');
+                }).map((cat) {
                   return DropdownMenuItem<String>(
                     value: cat['_id']?.toString() ?? cat['id']?.toString(),
                     child: Text(cat['cName'] ?? 'Unknown'),
                   );
                 }).toList(),
                 onChanged: (value) {
-              setState(() {
-                    _selectedCategoryId = value;
-                    _selectedSessionTypeId = null;
-                  });
                   if (value != null) {
+                    // Verify it's still a fitness category (not wellness)
+                    final selectedCat = _categories.firstWhere(
+                      (cat) => (cat['_id']?.toString() ?? cat['id']?.toString()) == value,
+                      orElse: () => {},
+                    );
+                    final categoryName = (selectedCat['cName'] ?? '').toString().toLowerCase();
+                    if (!categoryName.contains('fitness') || categoryName.contains('wellness')) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Only fitness categories are allowed in Fitness Card Manager')),
+                      );
+                      return;
+                    }
+                    
+                    setState(() {
+                      _selectedCategoryId = value;
+                      _fitnessCategoryId = value; // Update fitness category ID
+                      _selectedSessionTypeId = null;
+                    });
                     _masterDataService.getSessionsByCategoryId(value).then((sessions) {
                       if (mounted) {
                         setState(() {
@@ -1558,9 +1607,9 @@ class _FitnessMembershipCardManagerState
                       if (mounted) {
                         print('Error loading sessions: $e');
                       }
-              });
-            }
-          },
+                    });
+                  }
+                },
               ),
         const SizedBox(height: 16),
         TextField(
