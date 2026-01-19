@@ -2,7 +2,7 @@ import 'dart:io';
 import 'api_service.dart';
 
 class ImageUploadService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // Upload a single image and get URL
   // Note: This assumes the backend has an image upload endpoint

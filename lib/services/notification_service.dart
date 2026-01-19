@@ -166,7 +166,7 @@ class NotificationService {
   }) async {
     try {
       final response = await ApiService.put(
-        'http://localhost:5000/api/v1/user/update-notification/$notificationId',
+        'https://outbox.nablean.com/api/v1/user/update-notification/$notificationId',
         {'isRead': isRead},
         requireAuth: true,
       );
@@ -183,7 +183,7 @@ class NotificationService {
   static Future<List<dynamic>> getAllNotifications() async {
     try {
       final response = await ApiService.get(
-        'http://localhost:5000/api/v1/user/get-all-notification',
+        'https://outbox.nablean.com/api/v1/user/get-all-notification',
         requireAuth: true,
       );
       

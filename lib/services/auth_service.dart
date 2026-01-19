@@ -2,7 +2,7 @@ import 'dart:io';
 import 'api_service.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 1.2 Register new user - API endpoint requires multipart/form-data
   Future<Map<String, dynamic>?> signUp({

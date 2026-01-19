@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'api_service.dart';
 
 class SubscriptionService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 14.1 Create Subscription
   Future<Map<String, dynamic>?> createSubscription({

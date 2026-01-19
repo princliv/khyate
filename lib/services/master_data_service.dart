@@ -1,7 +1,7 @@
 import 'api_service.dart';
 
 class MasterDataService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // Get all countries
   Future<List<dynamic>> getAllCountries() async {
@@ -48,7 +48,7 @@ class MasterDataService {
       if (e.toString().contains('Failed to fetch') || 
           e.toString().contains('NetworkError') ||
           e.toString().contains('Connection refused')) {
-        throw Exception('Cannot connect to server. Please ensure the backend server is running on http://localhost:5000');
+        throw Exception('Cannot connect to server. Please ensure the backend server is running on https://outbox.nablean.com');
       }
       throw Exception('Get countries error: ${e.toString()}');
     }
