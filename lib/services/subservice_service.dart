@@ -2,7 +2,7 @@ import 'dart:io';
 import 'api_service.dart';
 
 class SubServiceService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 4.1 Create Sub Service
   Future<Map<String, dynamic>?> createSubService({

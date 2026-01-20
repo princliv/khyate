@@ -2,7 +2,7 @@ import 'dart:io';
 import 'api_service.dart';
 
 class UserProfileService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // Get user profile by ID
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {

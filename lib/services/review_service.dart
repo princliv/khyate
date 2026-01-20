@@ -1,7 +1,7 @@
 import 'api_service.dart';
 
 class ReviewService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 2.6 Create Subscription Rating Review
   Future<Map<String, dynamic>?> createSubscriptionReview({

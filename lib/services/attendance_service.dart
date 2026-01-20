@@ -1,7 +1,7 @@
 import 'api_service.dart';
 
 class AttendanceService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 16.3 Mark Class Attendance (Package Booking)
   Future<Map<String, dynamic>?> markClassAttendance({

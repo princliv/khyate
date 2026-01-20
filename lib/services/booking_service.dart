@@ -1,7 +1,7 @@
 import 'api_service.dart';
 
 class BookingService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 13.1 Create Manual Booking
   Future<Map<String, dynamic>?> createManualBooking({

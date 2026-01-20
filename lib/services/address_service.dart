@@ -1,7 +1,7 @@
 import 'api_service.dart';
 
 class AddressService {
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://outbox.nablean.com/api/v1';
   
   // 2.4 Create Address
   Future<Map<String, dynamic>?> createAddress({
